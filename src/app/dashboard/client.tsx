@@ -203,7 +203,13 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
 
 // ─── Project Card ─────────────────────────────────────────────────────────────
 
-function HofmanMusicButton() {
+const SLUG_TO_AUDIO: Record<string, string> = {
+  "de-hofman": "/audio/hofman.mp3",
+  elster11:    "/audio/elster11.m4a",
+  depaveri:    "/audio/paveri.m4a",
+};
+
+function ProjectMusicButton({ slug }: { slug: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -212,7 +218,7 @@ function HofmanMusicButton() {
     e.stopPropagation();
 
     if (!audioRef.current) {
-      audioRef.current = new Audio("/audio/hofman.mp3");
+      audioRef.current = new Audio(SLUG_TO_AUDIO[slug]);
       audioRef.current.onended = () => setPlaying(false);
     }
 
@@ -224,12 +230,12 @@ function HofmanMusicButton() {
       audioRef.current.currentTime = 0;
       audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
     }
-  }, [playing]);
+  }, [playing, slug]);
 
   return (
     <button
       onClick={toggle}
-      title={playing ? "Stop muziek" : "Speel muziek af"}
+      title={playing ? "Stop muziek" : "Speel jingle af"}
       className="absolute bottom-5 right-5 w-8 h-8 rounded-full flex items-center justify-center transition-all z-10"
       style={{
         background: playing ? "rgba(237,255,0,0.25)" : "rgba(237,255,0,0.1)",
@@ -237,9 +243,7 @@ function HofmanMusicButton() {
         color: "#edff00",
       }}
     >
-      {playing
-        ? <Square size={12} fill="#edff00" />
-        : <Music2 size={13} />}
+      {playing ? <Square size={12} fill="#edff00" /> : <Music2 size={13} />}
     </button>
   );
 }
@@ -247,7 +251,7 @@ function HofmanMusicButton() {
 function ProjectCard({ project, stat }: { project: DashboardProject; stat?: ProjectStat }) {
   const logo     = SLUG_TO_LOGO[project.slug];
   const saleDate = SLUG_TO_SALE_DATE[project.slug] ?? project.saleStartsAt;
-  const isHofman = project.slug === "de-hofman";
+  const hasJingle = project.slug in SLUG_TO_AUDIO;
 
   return (
     <Link href={`/dashboard/${project.slug}/units`} className="h-full block">
@@ -334,7 +338,7 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: "rgba(237,255,0,0.15)", border: "1px solid rgba(237,255,0,0.3)", color: "#edff00" }}>→</div>
         </div>
 
-        {isHofman && <HofmanMusicButton />}
+        {hasJingle && <ProjectMusicButton slug={project.slug} />}
       </div>
     </Link>
   );
