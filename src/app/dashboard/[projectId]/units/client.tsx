@@ -9,7 +9,7 @@ import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { FloorPlanHeatmap } from "@/components/floor-plan-heatmap";
-import { getProjectConfig } from "@/lib/project-config";
+import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -103,7 +103,7 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
       .map((unit) => ({
         id: unit.id,
         timestamp: unit.boughtAt || unit.reservedAt!,
-        text: unit.status === "verkocht" ? `${unit.code} — ${unit.name} VERKOCHT` : `${unit.code} — ${unit.name} GERESERVEERD`,
+        text: unit.status === "verkocht" ? `${formatUnitCode(unit.code, config)} — ${unit.name} VERKOCHT` : `${formatUnitCode(unit.code, config)} — ${unit.name} GERESERVEERD`,
         status: unit.status,
       })),
     [units]
@@ -157,7 +157,7 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
                   )}>
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h4 className="font-semibold text-white text-sm">{unit.code}</h4>
+                        <h4 className="font-semibold text-white text-sm">{formatUnitCode(unit.code, config)}</h4>
                         <p className="text-xs text-gray-400 leading-tight mt-0.5">{unit.name}</p>
                       </div>
                       <Badge variant={unit.status === "beschikbaar" ? "info" : unit.status === "gereserveerd" ? "warning" : unit.status === "verkocht" ? "success" : "default"}>

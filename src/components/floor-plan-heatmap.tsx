@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -69,18 +70,18 @@ function getCellStyle(count: number, max: number, status: UnitStatus | undefined
   return                 { bg: "#713f12", numColor: "#fde68a", countColor: "#fbbf24", opacity: "1" };
 }
 
-function UnitCell({ unit, count, maxCount, style: cellBorder }: {
-  unit: DashboardUnit; count: number; maxCount: number; style?: React.CSSProperties;
+function UnitCell({ unit, count, maxCount, style: cellBorder, codeLabel }: {
+  unit: DashboardUnit; count: number; maxCount: number; style?: React.CSSProperties; codeLabel?: string;
 }) {
   const s = getCellStyle(count, maxCount, unit.status);
-  const numLabel = unit.code.replace(/^U-?/i, "");
+  const displayCode = codeLabel ?? unit.code;
   const isSold = unit.status === "verkocht";
   const isReserved = unit.status === "gereserveerd";
   const isComingSoon = unit.status === "coming_soon";
 
   return (
     <div
-      title={`Unit ${numLabel}${count > 0 ? ` — ${count} lead${count !== 1 ? "s" : ""} geïnteresseerd` : " — geen interesse"}`}
+      title={`${displayCode}${count > 0 ? ` — ${count} lead${count !== 1 ? "s" : ""} geïnteresseerd` : " — geen interesse"}`}
       style={{ flex: 1, ...cellBorder, backgroundColor: s.bg, opacity: s.opacity as any,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         padding: "6px", cursor: "default", position: "relative", transition: "filter 0.15s",
@@ -88,7 +89,7 @@ function UnitCell({ unit, count, maxCount, style: cellBorder }: {
       className="hover:brightness-125"
     >
       <span style={{ color: s.numColor, fontSize: "clamp(13px,2.2vw,26px)", fontWeight: 700, lineHeight: 1 }}>
-        {numLabel}
+        {displayCode}
       </span>
       <span style={{ color: s.countColor, fontSize: "clamp(8px,1vw,12px)", marginTop: 3, fontWeight: 600, lineHeight: 1 }}>
         {isComingSoon ? "binnenkort" : isSold ? "✓ verkocht" : isReserved ? "◷ reserv." : count > 0 ? `${count}×` : "—"}
@@ -183,8 +184,8 @@ function LegendItem({ bg, border, label }: { bg: string; border: string; label: 
   );
 }
 
-function RankedList({ units, pinnedCounts, maxCount }: {
-  units: DashboardUnit[]; pinnedCounts: Record<number, number>; maxCount: number;
+function RankedList({ units, pinnedCounts, maxCount, config }: {
+  units: DashboardUnit[]; pinnedCounts: Record<number, number>; maxCount: number; config: ReturnType<typeof getProjectConfig>;
 }) {
   const ranked = useMemo(() =>
     units.map((u) => ({ unit: u, count: pinnedCounts[Number(u.id)] ?? 0 }))
@@ -197,16 +198,16 @@ function RankedList({ units, pinnedCounts, maxCount }: {
 
   return (
     <div className="pt-4 border-t border-blue-800/40">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Meest begeerde units</p>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Meest begeerde {config.unitPlural.toLowerCase()}</p>
       <div className="space-y-2">
         {ranked.map(({ unit, count }) => {
           const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
-          const numLabel = unit.code.replace(/^U-?/i, "");
+          const codeLabel = formatUnitCode(unit.code, config);
           const ratio = maxCount > 0 ? count / maxCount : 0;
           const barColor = ratio >= 0.7 ? "#16a34a" : ratio >= 0.4 ? "#22c55e" : ratio >= 0.2 ? "#84cc16" : "#f59e0b";
           return (
             <div key={unit.id} className="flex items-center gap-3">
-              <span className="w-6 text-center text-xs font-bold text-white tabular-nums">{numLabel}</span>
+              <span className="w-10 text-center text-xs font-bold text-white tabular-nums">{codeLabel}</span>
               <div className="flex-1 h-2.5 bg-blue-950/60 rounded-full overflow-hidden border border-blue-800/40">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
               </div>
@@ -226,6 +227,7 @@ interface FloorPlanHeatmapProps {
 }
 
 export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlanHeatmapProps) {
+  const config = getProjectConfig(projectSlug);
   const sorted = useMemo(() =>
     [...units].sort((a, b) => {
       const na = parseInt(a.code.replace(/\D/g, ""), 10) || 0;
@@ -278,14 +280,14 @@ export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlan
                 const unit = row[colIdx];
                 if (!unit) return <div key={`empty-${colIdx}`} style={{ borderLeft: colIdx > 0 ? "2px solid rgba(255,255,255,0.15)" : undefined, background: "#0f172a", aspectRatio: "1" }} />;
                 const count = pinnedCounts[Number(unit.id)] ?? 0;
-                return <UnitCell key={unit.id} unit={unit} count={count} maxCount={maxCount} style={{ borderLeft: colIdx > 0 ? "2px solid rgba(255,255,255,0.15)" : undefined, aspectRatio: "1" }} />;
+                return <UnitCell key={unit.id} unit={unit} count={count} maxCount={maxCount} codeLabel={formatUnitCode(unit.code, config)} style={{ borderLeft: colIdx > 0 ? "2px solid rgba(255,255,255,0.15)" : undefined, aspectRatio: "1" }} />;
               })}
             </div>
           ))}
         </div>
       )}
 
-      <RankedList units={sorted} pinnedCounts={pinnedCounts} maxCount={maxCount} />
+      <RankedList units={sorted} pinnedCounts={pinnedCounts} maxCount={maxCount} config={config} />
     </div>
   );
 }

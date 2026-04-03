@@ -14,6 +14,8 @@ export interface ProjectConfig {
   interestLabel: string;
   /** Groeperingslabel (bv. "Verdieping" of "Sectie") */
   groupLabel: string;
+  /** Prefix voor unit-codes in de weergave (bv. "U" → "BOX") */
+  codePrefix: string;
 }
 
 const DEFAULT_CONFIG: ProjectConfig = {
@@ -22,6 +24,7 @@ const DEFAULT_CONFIG: ProjectConfig = {
   navLabel:      "Units",
   interestLabel: "Interesse per Unit",
   groupLabel:    "Verdieping",
+  codePrefix:    "U",
 };
 
 const PROJECT_CONFIGS: Record<string, Partial<ProjectConfig>> = {
@@ -31,9 +34,20 @@ const PROJECT_CONFIGS: Record<string, Partial<ProjectConfig>> = {
     navLabel:      "Garageboxen",
     interestLabel: "Interesse per Garagebox",
     groupLabel:    "Sectie",
+    codePrefix:    "BOX",
   },
 };
 
 export function getProjectConfig(slug: string): ProjectConfig {
   return { ...DEFAULT_CONFIG, ...(PROJECT_CONFIGS[slug] ?? {}) };
+}
+
+/**
+ * Transformeert een Directus unit-code (bv. "U-1") naar de project-specifieke weergave (bv. "BOX-1").
+ * Werkt ook als het broncode-prefix al klopt.
+ */
+export function formatUnitCode(code: string, config: ProjectConfig): string {
+  // Haal het getal eruit (bijv. "U-14" → "14", "U14" → "14")
+  const num = code.replace(/^[A-Za-z]+-?/i, "");
+  return `${config.codePrefix}-${num}`;
 }

@@ -6,6 +6,7 @@ import { format, parseISO, formatDistanceToNow, differenceInSeconds } from "date
 import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useSaleAudio } from "@/hooks/useSaleAudio";
+import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -86,6 +87,7 @@ export default function VerkoopvoortgangClient({
   initialUnits, initialStats, directusProjectId, projectName,
   projectId, plausibleSiteId, initialSiteVisitors, initialSalesVisitors, saleStartsAt
 }: Props) {
+  const config = getProjectConfig(projectId);
   const [units, setUnits] = useState(initialUnits);
   const [stats, setStats] = useState(initialStats);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -106,9 +108,9 @@ export default function VerkoopvoortgangClient({
       const old = prev.find((u) => u.id === unit.id);
       if (!old) return;
       if (old.status !== "verkocht" && unit.status === "verkocht") {
-        newEvents.push({ id: unit.id, text: `${unit.code} — ${unit.name} VERKOCHT`, status: "verkocht", time: new Date() });
+        newEvents.push({ id: unit.id, text: `${formatUnitCode(unit.code, config)} — ${unit.name} VERKOCHT`, status: "verkocht", time: new Date() });
       } else if (old.status !== "gereserveerd" && unit.status === "gereserveerd") {
-        newEvents.push({ id: unit.id, text: `${unit.code} — ${unit.name} GERESERVEERD`, status: "gereserveerd", time: new Date() });
+        newEvents.push({ id: unit.id, text: `${formatUnitCode(unit.code, config)} — ${unit.name} GERESERVEERD`, status: "gereserveerd", time: new Date() });
       }
     });
     if (newEvents.length > 0) {
@@ -125,7 +127,7 @@ export default function VerkoopvoortgangClient({
       .slice(0, 10)
       .map((u) => ({
         id: u.id,
-        text: u.status === "verkocht" ? `${u.code} — ${u.name} VERKOCHT` : `${u.code} — ${u.name} GERESERVEERD`,
+        text: u.status === "verkocht" ? `${formatUnitCode(u.code, config)} — ${u.name} VERKOCHT` : `${formatUnitCode(u.code, config)} — ${u.name} GERESERVEERD`,
         status: u.status as UnitStatus,
         time: new Date(u.boughtAt || u.reservedAt || ""),
       }));
@@ -331,7 +333,7 @@ export default function VerkoopvoortgangClient({
           <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6">
             <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
               <MapPin size={16} className="text-yellow-400" />
-              Units overzicht
+              {config.unitPlural} overzicht
             </h3>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {sortedUnits.map((unit) => (
@@ -341,7 +343,7 @@ export default function VerkoopvoortgangClient({
                   unit.status === "beschikbaar"  && "bg-blue-900/30 border-blue-700/40 text-gray-300",
                   unit.status === "coming_soon"  && "bg-gray-900/30 border-gray-700/40 text-gray-500"
                 )}>
-                  {unit.code.replace(/^U-?/i, "")}
+                  {formatUnitCode(unit.code, config)}
                   <div className="text-[10px] font-normal mt-0.5 opacity-70">
                     {unit.status === "verkocht" ? "✓" : unit.status === "gereserveerd" ? "◷" : unit.status === "coming_soon" ? "…" : "○"}
                   </div>
