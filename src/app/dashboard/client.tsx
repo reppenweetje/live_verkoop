@@ -76,6 +76,7 @@ const SLUG_TO_LOGO: Record<string, string> = {
   "de-hofman": "/logos/de-hofman.svg",
   depaveri:    "/logos/depaveri.svg",
   elster11:    "/logos/elster11.svg",
+  "6th-grid":  "/logos/6th-grid.svg",
 };
 
 const SLUG_TO_SALE_DATE: Record<string, string> = {
