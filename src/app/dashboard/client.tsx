@@ -4,9 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Building2, Zap, Clock, TrendingUp, Euro, CheckCircle2, Timer, Music2, Square } from "lucide-react";
+import { Building2, Zap, Clock, TrendingUp, Euro, CheckCircle2, Timer } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
-import { useRef, useState, useCallback } from "react";
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 interface DashboardProject {
   id: string;
@@ -209,60 +210,52 @@ const SLUG_TO_AUDIO: Record<string, string> = {
   depaveri:    "/audio/paveri.m4a",
 };
 
-function ProjectMusicButton({ slug }: { slug: string }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
+// Audio-objecten op module-niveau zodat ze blijven afspelen tijdens client-side navigatie
+const audioInstances: Record<string, HTMLAudioElement> = {};
 
-  const toggle = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!audioRef.current) {
-      audioRef.current = new Audio(SLUG_TO_AUDIO[slug]);
-      audioRef.current.onended = () => setPlaying(false);
-    }
-
-    if (playing) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setPlaying(false);
-    } else {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
-    }
-  }, [playing, slug]);
-
-  return (
-    <button
-      onClick={toggle}
-      title={playing ? "Stop muziek" : "Speel jingle af"}
-      className="absolute bottom-5 right-5 w-8 h-8 rounded-full flex items-center justify-center transition-all z-10"
-      style={{
-        background: playing ? "rgba(237,255,0,0.25)" : "rgba(237,255,0,0.1)",
-        border: `1px solid rgba(237,255,0,${playing ? "0.6" : "0.25"})`,
-        color: "#edff00",
-      }}
-    >
-      {playing ? <Square size={12} fill="#edff00" /> : <Music2 size={13} />}
-    </button>
-  );
+function getAudio(slug: string): HTMLAudioElement | null {
+  if (typeof window === "undefined") return null;
+  const src = SLUG_TO_AUDIO[slug];
+  if (!src) return null;
+  if (!audioInstances[slug]) {
+    audioInstances[slug] = new Audio(src);
+  }
+  return audioInstances[slug];
 }
 
 function ProjectCard({ project, stat }: { project: DashboardProject; stat?: ProjectStat }) {
-  const logo     = SLUG_TO_LOGO[project.slug];
-  const saleDate = SLUG_TO_SALE_DATE[project.slug] ?? project.saleStartsAt;
+  const logo      = SLUG_TO_LOGO[project.slug];
+  const saleDate  = SLUG_TO_SALE_DATE[project.slug] ?? project.saleStartsAt;
   const hasJingle = project.slug in SLUG_TO_AUDIO;
+  const router    = useRouter();
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!hasJingle) return;
+    e.preventDefault();
+    const audio = getAudio(project.slug);
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+    router.push(`/dashboard/${project.slug}/units`);
+  }, [hasJingle, project.slug, router]);
 
   return (
-    <Link href={`/dashboard/${project.slug}/units`} className="h-full block">
+    <div
+      className="h-full block cursor-pointer"
+      onClick={hasJingle ? handleClick : undefined}
+    >
+      {/* Wikkel in Link alleen als er geen jingle is, anders navigeert handleClick */}
       <div
-        className="group relative overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer h-full flex flex-col"
+        className="group relative overflow-hidden rounded-2xl transition-all duration-300 h-full flex flex-col"
         style={{
           background: "rgba(27, 35, 170, 0.25)",
           border: "1px solid rgba(237, 255, 0, 0.1)",
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(237,255,0,0.35)"; }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(237,255,0,0.1)"; }}
+        onClick={!hasJingle ? () => router.push(`/dashboard/${project.slug}/units`) : undefined}
+      >
       >
         <div className="relative flex flex-col justify-between flex-1 p-7">
           <div className="mb-5 h-8 flex items-center">
@@ -337,10 +330,8 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
         <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: "rgba(237,255,0,0.15)", border: "1px solid rgba(237,255,0,0.3)", color: "#edff00" }}>→</div>
         </div>
-
-        {hasJingle && <ProjectMusicButton slug={project.slug} />}
       </div>
-    </Link>
+    </div>
   );
 }
 
