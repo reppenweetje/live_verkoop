@@ -44,14 +44,14 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
           <div className="mb-8 pb-6" style={{ borderBottom: "1px solid rgba(237, 255, 0, 0.08)" }}>
             <p
               className="text-xs font-bold uppercase tracking-widest mb-3"
-              style={{ color: "rgba(237,255,0,0.6)", fontFamily: "'Mont', 'Montserrat', sans-serif" }}
+              style={{ color: "rgba(237,255,0,0.6)", fontFamily: "'Montserrat', sans-serif" }}
             >
               Project
             </p>
             {logo ? (
               <Image src={logo} alt={projectDisplayName} width={180} height={32} className="h-7 w-auto object-contain mb-1" />
             ) : (
-              <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+              <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Montserrat', sans-serif" }}>
                 {projectDisplayName}
               </h2>
             )}
@@ -60,7 +60,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
               style={{ background: "rgba(237,255,0,0.08)", border: "1px solid rgba(237,255,0,0.15)" }}
             >
               <span className="pulsing-dot" />
-              <span className="text-xs font-bold" style={{ color: "#edff00", fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+              <span className="text-xs font-bold" style={{ color: "#edff00", fontFamily: "'Montserrat', sans-serif" }}>
                 Live Tracking
               </span>
             </div>
@@ -87,7 +87,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                     style={{
                       color: item.highlight && !isActive ? "#edff00" : undefined,
                       fontWeight: item.highlight ? 700 : undefined,
-                      fontFamily: "'Mont', 'Montserrat', sans-serif",
+                      fontFamily: "'Montserrat', sans-serif",
                     }}
                   >
                     {item.label}
@@ -115,7 +115,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <Link
               href="/dashboard"
               className="flex items-center gap-2 text-xs transition-colors"
-              style={{ color: "#d8d6d6", fontFamily: "'Mont', 'Montserrat', sans-serif" }}
+              style={{ color: "#d8d6d6", fontFamily: "'Montserrat', sans-serif" }}
             >
               <ChevronRight size={16} className="rotate-180" />
               Terug naar overzicht

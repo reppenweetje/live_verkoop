@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* ─── Mont font (Fontshare) ──────────────────────────────────────────────── */
-@import url('https://api.fontshare.com/v2/css?f[]=mont@400,500,700,900&display=swap');
+/* ─── Montserrat font (Google Fonts) ────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
 
 /* ─── Tailwind v4 custom brand tokens ───────────────────────────────────── */
 @theme {
@@ -12,7 +12,7 @@
   --color-midnite-80: rgba(15, 15, 112, 0.8);
   --color-ykb-40:     rgba(27, 35, 170, 0.4);
 
-  --font-mont: 'Mont', 'Montserrat', system-ui, sans-serif;
+  --font-mont: 'Montserrat', system-ui, sans-serif;
 }
 
 /* ─── CSS variables ──────────────────────────────────────────────────────── */
@@ -29,7 +29,7 @@
 body {
   background-color: var(--background);
   color: #ffffff;
-  font-family: 'Mont', 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -76,7 +76,7 @@ body {
   color: #d8d6d6;
   border-radius: 0.5rem;
   transition: color 0.15s, background 0.15s;
-  font-family: 'Mont', 'Montserrat', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
 }
 
@@ -104,6 +104,6 @@ body {
 
 /* ─── Typography overrides ───────────────────────────────────────────────── */
 h1, h2, h3 {
-  font-family: 'Mont', 'Montserrat', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 700;
 }

@@ -165,7 +165,7 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
 
       {portfolio.perProject.length > 0 && (
         <div className="px-8 py-5" style={{ borderTop: "1px solid rgba(237,255,0,0.08)" }}>
-          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Mont','Montserrat',sans-serif" }}>Per project</p>
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Montserrat',sans-serif" }}>Per project</p>
           <div className="space-y-3">
             {portfolio.perProject.map((p) => {
               const logo = SLUG_TO_LOGO[p.slug];
@@ -220,7 +220,7 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
           <div className="mb-5 h-8 flex items-center">
             {logo
               ? <Image src={logo} alt={project.name} width={220} height={40} className="h-8 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" />
-              : <span className="text-lg font-bold text-white" style={{ fontFamily: "'Mont','Montserrat',sans-serif" }}>{project.name}</span>
+              : <span className="text-lg font-bold text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>{project.name}</span>
             }
           </div>
 
@@ -230,7 +230,7 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
               {project.status === "live" && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: "rgba(237,255,0,0.1)", border: "1px solid rgba(237,255,0,0.25)" }}>
                   <span className="pulsing-dot" />
-                  <span className="text-xs font-bold" style={{ color: "#edff00", fontFamily: "'Mont','Montserrat',sans-serif" }}>Live</span>
+                  <span className="text-xs font-bold" style={{ color: "#edff00", fontFamily: "'Montserrat',sans-serif" }}>Live</span>
                 </div>
               )}
             </div>
@@ -273,15 +273,15 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
 
           <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(237,255,0,0.08)" }}>
             {project.status === "live" && (
-              <span className="rounded-lg px-3 py-1 text-xs font-bold" style={{ background: "rgba(237,255,0,0.1)", color: "#edff00", border: "1px solid rgba(237,255,0,0.25)", fontFamily: "'Mont','Montserrat',sans-serif" }}>Live</span>
+              <span className="rounded-lg px-3 py-1 text-xs font-bold" style={{ background: "rgba(237,255,0,0.1)", color: "#edff00", border: "1px solid rgba(237,255,0,0.25)", fontFamily: "'Montserrat',sans-serif" }}>Live</span>
             )}
             {project.status === "voorbereiding" && (
-              <span className="rounded-lg px-3 py-1 text-xs font-bold inline-flex items-center gap-1.5" style={{ background: "rgba(27,35,170,0.4)", color: "#d8d6d6", border: "1px solid rgba(27,35,170,0.6)", fontFamily: "'Mont','Montserrat',sans-serif" }}>
+              <span className="rounded-lg px-3 py-1 text-xs font-bold inline-flex items-center gap-1.5" style={{ background: "rgba(27,35,170,0.4)", color: "#d8d6d6", border: "1px solid rgba(27,35,170,0.6)", fontFamily: "'Montserrat',sans-serif" }}>
                 <Clock size={11} /> In voorbereiding
               </span>
             )}
             {project.status === "afgerond" && (
-              <span className="rounded-lg px-3 py-1 text-xs font-bold" style={{ background: "rgba(27,35,170,0.2)", color: "#d8d6d6", border: "1px solid rgba(27,35,170,0.4)", fontFamily: "'Mont','Montserrat',sans-serif" }}>Afgerond</span>
+              <span className="rounded-lg px-3 py-1 text-xs font-bold" style={{ background: "rgba(27,35,170,0.2)", color: "#d8d6d6", border: "1px solid rgba(27,35,170,0.4)", fontFamily: "'Montserrat',sans-serif" }}>Afgerond</span>
             )}
           </div>
         </div>
@@ -304,7 +304,7 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
       <div className="max-w-7xl mx-auto">
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-white mb-2 uppercase tracking-wide" style={{ fontFamily: "'Mont','Montserrat',sans-serif" }}>Projecten</h1>
+          <h1 className="text-4xl font-bold text-white mb-2 uppercase tracking-wide" style={{ fontFamily: "'Montserrat',sans-serif" }}>Projecten</h1>
           <p className="text-lg" style={{ color: "#d8d6d6" }}>Selecteer een project om de dashboard te bekijken</p>
         </div>
 
@@ -317,7 +317,7 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
             <div key={category.id} className="mb-12">
               {/* Categorie header */}
               <div className="flex items-baseline gap-3 mb-6">
-                <h2 className="text-2xl font-bold text-white uppercase tracking-wide" style={{ fontFamily: "'Mont','Montserrat',sans-serif" }}>{category.label}</h2>
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wide" style={{ fontFamily: "'Montserrat',sans-serif" }}>{category.label}</h2>
                 <span className="text-sm" style={{ color: "rgba(216,214,214,0.6)" }}>{category.description}</span>
               </div>
 
@@ -330,7 +330,7 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
                   <div key={sub.id} className="mb-8">
                     {sub.label && (
                       <div className="flex items-center gap-3 mb-4">
-                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Mont','Montserrat',sans-serif" }}>{sub.label}</p>
+                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Montserrat',sans-serif" }}>{sub.label}</p>
                         <div className="flex-1 h-px" style={{ background: "rgba(237,255,0,0.1)" }} />
                       </div>
                     )}

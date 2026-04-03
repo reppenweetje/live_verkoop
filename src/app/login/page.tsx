@@ -66,7 +66,7 @@ function LoginForm() {
           </div>
           <h1
             className="text-3xl font-bold tracking-tight text-white uppercase"
-            style={{ fontFamily: "'Mont', 'Montserrat', sans-serif", letterSpacing: "0.12em" }}
+            style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: "0.12em" }}
           >
             REPP
           </h1>
@@ -84,7 +84,7 @@ function LoginForm() {
             backdropFilter: "blur(20px)",
           }}
         >
-          <h2 className="text-xl font-bold text-white mb-6" style={{ fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+          <h2 className="text-xl font-bold text-white mb-6" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             Inloggen
           </h2>
 
@@ -149,7 +149,7 @@ function LoginForm() {
               style={{
                 background: isLoading ? "rgba(237,255,0,0.6)" : "#edff00",
                 color: "#0f0f70",
-                fontFamily: "'Mont', 'Montserrat', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontWeight: 700,
                 letterSpacing: "0.04em",
               }}

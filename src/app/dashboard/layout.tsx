@@ -38,7 +38,7 @@ export default async function DashboardLayout({
             </div>
             <span
               className="text-lg font-bold text-white tracking-widest uppercase"
-              style={{ fontFamily: "'Mont', 'Montserrat', sans-serif" }}
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
               REPP
             </span>
@@ -55,7 +55,7 @@ export default async function DashboardLayout({
               >
                 <User size={13} style={{ color: "#0f0f70" }} />
               </div>
-              <span className="text-sm text-white font-medium" style={{ fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+              <span className="text-sm text-white font-medium" style={{ fontFamily: "'Montserrat', sans-serif" }}>
                 {user?.name ?? user?.email ?? "Gebruiker"}
               </span>
             </div>
