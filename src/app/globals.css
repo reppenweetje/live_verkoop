@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f0f70;
+  --foreground: #ffffff;
+  --card: rgba(11, 11, 82, 0.5);
+  --card-foreground: #ffffff;
+  --muted: #d8d6d6;
+  --accent: #edff00;
+  --accent-gold: #c8964a;
+  --accent-blue: #1b23aa;
+  --accent-red: #ef4444;
+  --accent-emerald: #10b981;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom utility classes */
+.gradient-brand {
+  @apply bg-gradient-to-br from-blue-600 to-blue-400 relative;
+  background: linear-gradient(135deg, #1b23aa 0%, #2d35c7 100%);
+}
+
+.glass-card {
+  @apply backdrop-blur-xl;
+  background: rgba(11, 11, 82, 0.4);
+  border: 1px solid rgba(237, 255, 0, 0.05);
+}
+
+.pulsing-dot {
+  @apply inline-block w-2 h-2 rounded-full animate-pulse;
+  background-color: #edff00;
+}
+
+.kpi-card {
+  @apply rounded-xl p-6 transition-all;
+  background: rgba(11, 11, 82, 0.5);
+  border: 1px solid rgba(237, 255, 0, 0.1);
+}
+
+.kpi-card:hover {
+  border-color: rgba(237, 255, 0, 0.2);
+}
+
+.nav-link {
+  @apply flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white rounded-lg transition-colors;
+}
+
+.nav-link-active {
+  @apply text-yellow-300 border-l-4;
+  background: rgba(237, 255, 0, 0.05);
+  border-left-color: #edff00;
+}
+
+.diamond-pattern {
+  background-image:
+    linear-gradient(45deg, rgba(237, 255, 0, 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(237, 255, 0, 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(237, 255, 0, 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(237, 255, 0, 0.03) 75%);
+  background-size: 40px 40px;
+  background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+}
