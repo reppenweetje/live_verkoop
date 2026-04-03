@@ -13,9 +13,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="nl">
-      <body>
-        {children}
-      </body>
+      <head>
+        <link
+          rel="preconnect"
+          href="https://api.fontshare.com"
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }

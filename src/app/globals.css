@@ -1,69 +1,109 @@
 @import "tailwindcss";
 
+/* ─── Mont font (Fontshare) ──────────────────────────────────────────────── */
+@import url('https://api.fontshare.com/v2/css?f[]=mont@400,500,700,900&display=swap');
+
+/* ─── Tailwind v4 custom brand tokens ───────────────────────────────────── */
+@theme {
+  --color-midnite:    #0f0f70;
+  --color-ykb:        #1b23aa;
+  --color-neon:       #edff00;
+  --color-repp-gray:  #d8d6d6;
+  --color-midnite-80: rgba(15, 15, 112, 0.8);
+  --color-ykb-40:     rgba(27, 35, 170, 0.4);
+
+  --font-mont: 'Mont', 'Montserrat', system-ui, sans-serif;
+}
+
+/* ─── CSS variables ──────────────────────────────────────────────────────── */
 :root {
   --background: #0f0f70;
   --foreground: #ffffff;
-  --card: rgba(11, 11, 82, 0.5);
-  --card-foreground: #ffffff;
-  --muted: #d8d6d6;
-  --accent: #edff00;
-  --accent-gold: #c8964a;
-  --accent-blue: #1b23aa;
-  --accent-red: #ef4444;
-  --accent-emerald: #10b981;
+  --card:       rgba(27, 35, 170, 0.25);
+  --muted:      #d8d6d6;
+  --accent:     #edff00;
+  --accent-ykb: #1b23aa;
 }
 
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 body {
   background-color: var(--background);
-  color: var(--foreground);
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  font-family: 'Mont', 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom utility classes */
+/* ─── Brand utilities ────────────────────────────────────────────────────── */
 .gradient-brand {
-  @apply bg-gradient-to-br from-blue-600 to-blue-400 relative;
-  background: linear-gradient(135deg, #1b23aa 0%, #2d35c7 100%);
+  background: linear-gradient(135deg, #0f0f70 0%, #1b23aa 100%);
 }
 
 .glass-card {
-  @apply backdrop-blur-xl;
-  background: rgba(11, 11, 82, 0.4);
-  border: 1px solid rgba(237, 255, 0, 0.05);
+  backdrop-filter: blur(16px);
+  background: rgba(27, 35, 170, 0.2);
+  border: 1px solid rgba(237, 255, 0, 0.08);
 }
 
 .pulsing-dot {
-  @apply inline-block w-2 h-2 rounded-full animate-pulse;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
   background-color: #edff00;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .kpi-card {
-  @apply rounded-xl p-6 transition-all;
-  background: rgba(11, 11, 82, 0.5);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  transition: all 0.2s;
+  background: rgba(27, 35, 170, 0.25);
   border: 1px solid rgba(237, 255, 0, 0.1);
 }
 
 .kpi-card:hover {
-  border-color: rgba(237, 255, 0, 0.2);
+  border-color: rgba(237, 255, 0, 0.25);
+  background: rgba(27, 35, 170, 0.35);
 }
 
 .nav-link {
-  @apply flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white rounded-lg transition-colors;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #d8d6d6;
+  border-radius: 0.5rem;
+  transition: color 0.15s, background 0.15s;
+  font-family: 'Mont', 'Montserrat', sans-serif;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+  background: rgba(237, 255, 0, 0.06);
 }
 
 .nav-link-active {
-  @apply text-yellow-300 border-l-4;
-  background: rgba(237, 255, 0, 0.05);
-  border-left-color: #edff00;
+  color: #edff00;
+  background: rgba(237, 255, 0, 0.08);
+  border-left: 3px solid #edff00;
+  padding-left: calc(1rem - 3px);
 }
 
 .diamond-pattern {
   background-image:
-    linear-gradient(45deg, rgba(237, 255, 0, 0.03) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(237, 255, 0, 0.03) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(237, 255, 0, 0.03) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(237, 255, 0, 0.03) 75%);
+    linear-gradient(45deg, rgba(237, 255, 0, 0.025) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(237, 255, 0, 0.025) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(237, 255, 0, 0.025) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(237, 255, 0, 0.025) 75%);
   background-size: 40px 40px;
   background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+}
+
+/* ─── Typography overrides ───────────────────────────────────────────────── */
+h1, h2, h3 {
+  font-family: 'Mont', 'Montserrat', sans-serif;
+  font-weight: 700;
 }

@@ -92,8 +92,8 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
   const availableVal = portfolio.totalProjectValue - portfolio.verkochtTotal - portfolio.gereserveerdTotal;
 
   return (
-    <div className="mb-12 rounded-2xl border border-yellow-400/15 bg-gradient-to-br from-blue-900/50 to-indigo-900/40 overflow-hidden">
-      <div className="px-8 pt-8 pb-6 border-b border-blue-800/40">
+    <div className="mb-12 rounded-2xl overflow-hidden" style={{ background: "rgba(27,35,170,0.22)", border: "1px solid rgba(237,255,0,0.12)" }}>
+      <div className="px-8 pt-8 pb-6" style={{ borderBottom: "1px solid rgba(237,255,0,0.08)" }}>
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <p className="text-xs font-semibold text-yellow-400/70 uppercase tracking-widest mb-1">Portfolio</p>
@@ -108,10 +108,10 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
 
         <div className="mt-6">
           <div className="flex justify-between text-xs text-gray-400 mb-2">
-            <span>Verkoopvoortgang</span>
-            <span>{soldPct.toFixed(1)}% verkocht · {(soldPct + reservedPct).toFixed(1)}% incl. gereserveerd</span>
+            <span style={{ color: "#d8d6d6" }}>Verkoopvoortgang</span>
+            <span style={{ color: "#d8d6d6" }}>{soldPct.toFixed(1)}% verkocht · {(soldPct + reservedPct).toFixed(1)}% incl. gereserveerd</span>
           </div>
-          <div className="h-3 bg-blue-950/60 rounded-full overflow-hidden border border-blue-800/40">
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(15,15,112,0.6)", border: "1px solid rgba(27,35,170,0.5)" }}>
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{ width: `${Math.min(soldPct + reservedPct, 100)}%`, background: "linear-gradient(90deg, #34d399, #10b981, #fbbf24)" }}
@@ -128,44 +128,44 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 divide-x divide-y divide-blue-800/30">
-        <div className="p-6 flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-emerald-900/30"><CheckCircle2 size={18} className="text-emerald-400" /></div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-0" style={{ borderTop: "1px solid rgba(237,255,0,0.08)", display: "grid" }}>
+        <div className="p-6 flex items-start gap-3" style={{ borderRight: "1px solid rgba(237,255,0,0.06)", borderBottom: "1px solid rgba(237,255,0,0.06)" }}>
+          <div className="p-2 rounded-lg" style={{ background: "rgba(16,185,129,0.15)" }}><CheckCircle2 size={18} style={{ color: "#10b981" }} /></div>
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">Omzet behaald</p>
+            <p className="text-xs mb-0.5" style={{ color: "#d8d6d6" }}>Omzet behaald</p>
             <p className="text-xl font-bold text-white">{formatCurrency(portfolio.verkochtTotal)}</p>
-            <p className="text-xs text-emerald-400 mt-0.5">{portfolio.verkocht} unit{portfolio.verkocht !== 1 ? "s" : ""} verkocht</p>
+            <p className="text-xs mt-0.5" style={{ color: "#10b981" }}>{portfolio.verkocht} unit{portfolio.verkocht !== 1 ? "s" : ""} verkocht</p>
           </div>
         </div>
-        <div className="p-6 flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-amber-900/30"><Timer size={18} className="text-amber-400" /></div>
+        <div className="p-6 flex items-start gap-3" style={{ borderRight: "1px solid rgba(237,255,0,0.06)", borderBottom: "1px solid rgba(237,255,0,0.06)" }}>
+          <div className="p-2 rounded-lg" style={{ background: "rgba(251,191,36,0.15)" }}><Timer size={18} style={{ color: "#fbbf24" }} /></div>
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">Gereserveerde waarde</p>
+            <p className="text-xs mb-0.5" style={{ color: "#d8d6d6" }}>Gereserveerde waarde</p>
             <p className="text-xl font-bold text-white">{formatCurrency(portfolio.gereserveerdTotal)}</p>
-            <p className="text-xs text-amber-400 mt-0.5">{portfolio.gereserveerd} unit{portfolio.gereserveerd !== 1 ? "s" : ""} gereserveerd</p>
+            <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>{portfolio.gereserveerd} unit{portfolio.gereserveerd !== 1 ? "s" : ""} gereserveerd</p>
           </div>
         </div>
-        <div className="p-6 flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-blue-900/40"><Euro size={18} className="text-blue-300" /></div>
+        <div className="p-6 flex items-start gap-3" style={{ borderRight: "1px solid rgba(237,255,0,0.06)", borderBottom: "1px solid rgba(237,255,0,0.06)" }}>
+          <div className="p-2 rounded-lg" style={{ background: "rgba(27,35,170,0.4)" }}><Euro size={18} style={{ color: "#d8d6d6" }} /></div>
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">Nog beschikbaar</p>
+            <p className="text-xs mb-0.5" style={{ color: "#d8d6d6" }}>Nog beschikbaar</p>
             <p className="text-xl font-bold text-white">{formatCurrency(availableVal)}</p>
-            <p className="text-xs text-blue-400 mt-0.5">{portfolio.beschikbaar} unit{portfolio.beschikbaar !== 1 ? "s" : ""} beschikbaar</p>
+            <p className="text-xs mt-0.5" style={{ color: "#d8d6d6" }}>{portfolio.beschikbaar} unit{portfolio.beschikbaar !== 1 ? "s" : ""} beschikbaar</p>
           </div>
         </div>
-        <div className="p-6 flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-yellow-900/20"><TrendingUp size={18} className="text-yellow-400" /></div>
+        <div className="p-6 flex items-start gap-3" style={{ borderBottom: "1px solid rgba(237,255,0,0.06)" }}>
+          <div className="p-2 rounded-lg" style={{ background: "rgba(237,255,0,0.1)" }}><TrendingUp size={18} style={{ color: "#edff00" }} /></div>
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">Potentieel (incl. reserv.)</p>
+            <p className="text-xs mb-0.5" style={{ color: "#d8d6d6" }}>Potentieel (incl. reserv.)</p>
             <p className="text-xl font-bold text-white">{formatCurrency(portfolio.verkochtTotal + portfolio.gereserveerdTotal)}</p>
-            <p className="text-xs text-yellow-400 mt-0.5">{soldPct > 0 || reservedPct > 0 ? `${(soldPct + reservedPct).toFixed(1)}% van portfolio` : "Nog geen activiteit"}</p>
+            <p className="text-xs mt-0.5" style={{ color: "#edff00" }}>{soldPct > 0 || reservedPct > 0 ? `${(soldPct + reservedPct).toFixed(1)}% van portfolio` : "Nog geen activiteit"}</p>
           </div>
         </div>
       </div>
 
       {portfolio.perProject.length > 0 && (
-        <div className="px-8 py-5 border-t border-blue-800/40">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Per project</p>
+        <div className="px-8 py-5" style={{ borderTop: "1px solid rgba(237,255,0,0.08)" }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Mont','Montserrat',sans-serif" }}>Per project</p>
           <div className="space-y-3">
             {portfolio.perProject.map((p) => {
               const logo = SLUG_TO_LOGO[p.slug];
@@ -207,24 +207,30 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
 
   return (
     <Link href={`/dashboard/${project.slug}/units`} className="h-full block">
-      <div className="group relative overflow-hidden rounded-2xl border border-yellow-400/20 hover:border-yellow-400/50 bg-gradient-to-br from-blue-900/60 to-indigo-900/60 transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col">
-        <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
+      <div
+        className="group relative overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer h-full flex flex-col"
+        style={{
+          background: "rgba(27, 35, 170, 0.25)",
+          border: "1px solid rgba(237, 255, 0, 0.1)",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(237,255,0,0.35)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(237,255,0,0.1)"; }}
+      >
         <div className="relative flex flex-col justify-between flex-1 p-7">
           <div className="mb-5 h-8 flex items-center">
             {logo
               ? <Image src={logo} alt={project.name} width={220} height={40} className="h-8 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" />
-              : <span className="text-lg font-bold text-white">{project.name}</span>
+              : <span className="text-lg font-bold text-white" style={{ fontFamily: "'Mont','Montserrat',sans-serif" }}>{project.name}</span>
             }
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-gray-500 text-xs">{project.slug}</p>
+              <p className="text-xs" style={{ color: "rgba(216,214,214,0.5)" }}>{project.slug}</p>
               {project.status === "live" && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: "rgba(237,255,0,0.1)", border: "1px solid rgba(237,255,0,0.25)" }}>
                   <span className="pulsing-dot" />
-                  <span className="text-xs font-semibold text-yellow-300">Live</span>
+                  <span className="text-xs font-bold" style={{ color: "#edff00", fontFamily: "'Mont','Montserrat',sans-serif" }}>Live</span>
                 </div>
               )}
             </div>
@@ -232,15 +238,15 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
             <div className="space-y-2">
               {saleDate && (
                 <div className="flex items-center gap-2.5">
-                  <Zap size={14} className="text-yellow-400 flex-shrink-0" />
-                  <span className="text-sm text-gray-300">
+                  <Zap size={14} style={{ color: "#edff00" }} className="flex-shrink-0" />
+                  <span className="text-sm" style={{ color: "#d8d6d6" }}>
                     Verkoopmoment: {format(new Date(saleDate), "d MMM HH:mm", { locale: nl })}
                   </span>
                 </div>
               )}
               <div className="flex items-center gap-2.5">
-                <Building2 size={14} className="text-yellow-400 flex-shrink-0" />
-                <span className="text-sm text-gray-300">
+                <Building2 size={14} style={{ color: "#edff00" }} className="flex-shrink-0" />
+                <span className="text-sm" style={{ color: "#d8d6d6" }}>
                   {stat ? `${stat.total} units · ${stat.beschikbaar} beschikbaar` : "Units dashboard"}
                 </span>
               </div>
@@ -248,13 +254,16 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
 
             {stat && stat.totalProjectValue > 0 && (
               <div className="mt-4">
-                <div className="h-1.5 bg-blue-950/60 rounded-full overflow-hidden">
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(15,15,112,0.6)" }}>
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{ width: `${Math.min((stat.verkochtTotal / stat.totalProjectValue) * 100, 100)}%` }}
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min((stat.verkochtTotal / stat.totalProjectValue) * 100, 100)}%`,
+                      background: "#10b981",
+                    }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <div className="flex justify-between text-xs mt-1" style={{ color: "rgba(216,214,214,0.5)" }}>
                   <span>{formatCurrency(stat.verkochtTotal)} verkocht</span>
                   <span>{formatCurrency(stat.totalProjectValue)}</span>
                 </div>
@@ -262,23 +271,23 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
             )}
           </div>
 
-          <div className="border-t border-blue-800/40 mt-6 pt-5">
+          <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(237,255,0,0.08)" }}>
             {project.status === "live" && (
-              <span className="bg-yellow-400/10 text-yellow-300 border border-yellow-400/30 rounded-lg px-3 py-1 text-xs font-semibold">Live</span>
+              <span className="rounded-lg px-3 py-1 text-xs font-bold" style={{ background: "rgba(237,255,0,0.1)", color: "#edff00", border: "1px solid rgba(237,255,0,0.25)", fontFamily: "'Mont','Montserrat',sans-serif" }}>Live</span>
             )}
             {project.status === "voorbereiding" && (
-              <span className="bg-blue-400/10 text-blue-300 border border-blue-400/30 rounded-lg px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5">
+              <span className="rounded-lg px-3 py-1 text-xs font-bold inline-flex items-center gap-1.5" style={{ background: "rgba(27,35,170,0.4)", color: "#d8d6d6", border: "1px solid rgba(27,35,170,0.6)", fontFamily: "'Mont','Montserrat',sans-serif" }}>
                 <Clock size={11} /> In voorbereiding
               </span>
             )}
             {project.status === "afgerond" && (
-              <span className="bg-gray-800/50 text-gray-400 border border-gray-700 rounded-lg px-3 py-1 text-xs font-semibold">Afgerond</span>
+              <span className="rounded-lg px-3 py-1 text-xs font-bold" style={{ background: "rgba(27,35,170,0.2)", color: "#d8d6d6", border: "1px solid rgba(27,35,170,0.4)", fontFamily: "'Mont','Montserrat',sans-serif" }}>Afgerond</span>
             )}
           </div>
         </div>
 
         <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="w-8 h-8 rounded-full bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center text-yellow-300 text-sm">→</div>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: "rgba(237,255,0,0.15)", border: "1px solid rgba(237,255,0,0.3)", color: "#edff00" }}>→</div>
         </div>
       </div>
     </Link>
@@ -291,12 +300,12 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
   const projectBySlug = Object.fromEntries(projects.map((p) => [p.slug, p]));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 px-6 py-12">
+    <div className="min-h-screen px-6 py-12 diamond-pattern" style={{ background: "#0f0f70" }}>
       <div className="max-w-7xl mx-auto">
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-white mb-2">Projecten</h1>
-          <p className="text-gray-400 text-lg">Selecteer een project om de dashboard te bekijken</p>
+          <h1 className="text-4xl font-bold text-white mb-2 uppercase tracking-wide" style={{ fontFamily: "'Mont','Montserrat',sans-serif" }}>Projecten</h1>
+          <p className="text-lg" style={{ color: "#d8d6d6" }}>Selecteer een project om de dashboard te bekijken</p>
         </div>
 
         {/* Categorieën */}
@@ -308,8 +317,8 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
             <div key={category.id} className="mb-12">
               {/* Categorie header */}
               <div className="flex items-baseline gap-3 mb-6">
-                <h2 className="text-2xl font-bold text-white">{category.label}</h2>
-                <span className="text-sm text-gray-500">{category.description}</span>
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wide" style={{ fontFamily: "'Mont','Montserrat',sans-serif" }}>{category.label}</h2>
+                <span className="text-sm" style={{ color: "rgba(216,214,214,0.6)" }}>{category.description}</span>
               </div>
 
               {/* Subcategorieën */}
@@ -321,8 +330,8 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
                   <div key={sub.id} className="mb-8">
                     {sub.label && (
                       <div className="flex items-center gap-3 mb-4">
-                        <p className="text-xs font-semibold text-yellow-400/60 uppercase tracking-widest">{sub.label}</p>
-                        <div className="flex-1 h-px bg-yellow-400/10" />
+                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Mont','Montserrat',sans-serif" }}>{sub.label}</p>
+                        <div className="flex-1 h-px" style={{ background: "rgba(237,255,0,0.1)" }} />
                       </div>
                     )}
                     <div className={cn(

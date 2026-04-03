@@ -11,7 +11,7 @@ const SLUG_TO_LOGO: Record<string, string> = {
   "de-hofman": "/logos/de-hofman.svg",
   depaveri:    "/logos/depaveri.svg",
   elster11:    "/logos/elster11.svg",
-  "6th-grid":  "/logos/elster11.svg", // tijdelijk elster11 logo tot 6th-grid logo beschikbaar is
+  "6th-grid":  "/logos/elster11.svg",
 };
 
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
@@ -30,22 +30,44 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
-    <div className="flex min-h-screen bg-blue-950">
-      <aside className="w-64 bg-blue-900/40 border-r border-blue-800/50 sticky top-0 h-screen overflow-y-auto">
-        <div className="p-6">
-          <div className="mb-8 pb-6 border-b border-yellow-400/10">
-            <p className="text-xs font-semibold text-yellow-400/70 uppercase tracking-wider mb-3">Project</p>
+    <div className="flex min-h-screen" style={{ background: "#0f0f70" }}>
+      {/* Sidebar */}
+      <aside
+        className="w-64 sticky top-0 h-screen overflow-y-auto flex flex-col"
+        style={{
+          background: "rgba(27, 35, 170, 0.18)",
+          borderRight: "1px solid rgba(237, 255, 0, 0.08)",
+        }}
+      >
+        <div className="p-6 flex-1">
+          {/* Project header */}
+          <div className="mb-8 pb-6" style={{ borderBottom: "1px solid rgba(237, 255, 0, 0.08)" }}>
+            <p
+              className="text-xs font-bold uppercase tracking-widest mb-3"
+              style={{ color: "rgba(237,255,0,0.6)", fontFamily: "'Mont', 'Montserrat', sans-serif" }}
+            >
+              Project
+            </p>
             {logo ? (
               <Image src={logo} alt={projectDisplayName} width={180} height={32} className="h-7 w-auto object-contain mb-1" />
             ) : (
-              <h2 className="text-lg font-bold text-white">{projectDisplayName}</h2>
+              <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+                {projectDisplayName}
+              </h2>
             )}
-            <div className="flex items-center gap-2 mt-3 px-2 py-1 rounded bg-yellow-400/10 border border-yellow-400/20">
-              <span className="pulsing-dot"></span>
-              <span className="text-xs font-semibold text-yellow-300">Live Tracking</span>
+            <div
+              className="flex items-center gap-2 mt-3 px-2 py-1 rounded"
+              style={{ background: "rgba(237,255,0,0.08)", border: "1px solid rgba(237,255,0,0.15)" }}
+            >
+              <span className="pulsing-dot" />
+              <span className="text-xs font-bold" style={{ color: "#edff00", fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+                Live Tracking
+              </span>
             </div>
           </div>
-          <nav className="space-y-2">
+
+          {/* Nav */}
+          <nav className="space-y-1">
             {navItems.map((item) => {
               const isActive = pathname.includes(item.segment);
               const Icon = item.icon;
@@ -53,21 +75,31 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={cn(
-                    "nav-link",
-                    isActive && "nav-link-active",
-                    item.highlight && !isActive && "border border-yellow-400/20 bg-yellow-400/5 hover:bg-yellow-400/10"
-                  )}
+                  className={cn("nav-link", isActive && "nav-link-active")}
+                  style={item.highlight && !isActive ? {
+                    border: "1px solid rgba(237,255,0,0.15)",
+                    background: "rgba(237,255,0,0.04)",
+                  } : undefined}
                 >
-                  <Icon size={18} className={item.highlight ? "text-yellow-400" : undefined} />
-                  <span className={cn("flex-1", item.highlight && !isActive && "text-yellow-300 font-semibold")}>
+                  <Icon size={18} style={{ color: item.highlight ? "#edff00" : undefined }} />
+                  <span
+                    className="flex-1"
+                    style={{
+                      color: item.highlight && !isActive ? "#edff00" : undefined,
+                      fontWeight: item.highlight ? 700 : undefined,
+                      fontFamily: "'Mont', 'Montserrat', sans-serif",
+                    }}
+                  >
                     {item.label}
                   </span>
                   {item.highlight && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#edff00" }} />
                   )}
                   {item.badge && (
-                    <span className="ml-auto text-xs px-2 py-0.5 rounded bg-blue-800/50 text-blue-300 font-semibold">
+                    <span
+                      className="ml-auto text-xs px-2 py-0.5 rounded font-bold"
+                      style={{ background: "rgba(27,35,170,0.5)", color: "#d8d6d6" }}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -76,15 +108,23 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             })}
           </nav>
         </div>
-        <div className="border-t border-blue-800/50" />
-        <div className="p-6 flex flex-col gap-4">
-          <Link href="/dashboard" className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-200 transition-colors">
-            <ChevronRight size={16} className="rotate-180" />
-            Terug naar overzicht
-          </Link>
-          <LogoutButton compact />
+
+        {/* Footer */}
+        <div style={{ borderTop: "1px solid rgba(237,255,0,0.08)" }}>
+          <div className="p-6 flex flex-col gap-4">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 text-xs transition-colors"
+              style={{ color: "#d8d6d6", fontFamily: "'Mont', 'Montserrat', sans-serif" }}
+            >
+              <ChevronRight size={16} className="rotate-180" />
+              Terug naar overzicht
+            </Link>
+            <LogoutButton compact />
+          </div>
         </div>
       </aside>
+
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );

@@ -41,44 +41,65 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 flex items-center justify-center px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 diamond-pattern"
+      style={{ background: "linear-gradient(160deg, #0f0f70 0%, #0a0a55 50%, #0f0f70 100%)" }}
+    >
+      {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-yellow-400/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-400/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl" style={{ background: "rgba(27,35,170,0.4)" }} />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{ background: "rgba(237,255,0,0.04)" }} />
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
-        {/* Brand */}
+      <div className="relative z-10 w-full max-w-sm">
+        {/* Logo */}
         <div className="text-center mb-10">
-          <div className="flex items-center justify-center mb-5">
+          <div className="flex items-center justify-center mb-6">
             <Image
               src="/repp-logo.svg"
               alt="REPP"
-              width={64}
-              height={64}
-              className="object-contain drop-shadow-lg"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              width={56}
+              height={56}
+              className="object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">REPP Dashboard</h1>
-          <p className="text-blue-300/70 text-sm mt-1">Verkoopintelligentie · Realtimedata</p>
+          <h1
+            className="text-3xl font-bold tracking-tight text-white uppercase"
+            style={{ fontFamily: "'Mont', 'Montserrat', sans-serif", letterSpacing: "0.12em" }}
+          >
+            REPP
+          </h1>
+          <p className="text-sm mt-1.5" style={{ color: "#d8d6d6" }}>
+            Real Estate Performance Partner
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-blue-900/40 border border-blue-700/40 backdrop-blur-md rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-white mb-6">Inloggen</h2>
+        <div
+          className="rounded-2xl p-8"
+          style={{
+            background: "rgba(27, 35, 170, 0.22)",
+            border: "1px solid rgba(237, 255, 0, 0.12)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <h2 className="text-xl font-bold text-white mb-6" style={{ fontFamily: "'Mont', 'Montserrat', sans-serif" }}>
+            Inloggen
+          </h2>
 
           {error && (
-            <div className="mb-5 px-4 py-3 bg-red-500/15 border border-red-500/30 rounded-lg text-red-300 text-sm">
+            <div
+              className="mb-5 px-4 py-3 rounded-lg text-sm"
+              style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}
+            >
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-blue-200 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: "#d8d6d6" }}>
                 E-mailadres
               </label>
               <input
@@ -89,12 +110,18 @@ function LoginForm() {
                 placeholder="jij@repp.nl"
                 required
                 autoComplete="email"
-                className="w-full px-4 py-3 bg-blue-950/60 border border-blue-700/50 rounded-lg text-white placeholder-blue-500/50 focus:outline-none focus:border-yellow-400/70 focus:ring-1 focus:ring-yellow-400/50 transition-all text-sm"
+                className="w-full px-4 py-3 rounded-lg text-white text-sm transition-all outline-none"
+                style={{
+                  background: "rgba(15, 15, 112, 0.6)",
+                  border: "1px solid rgba(27, 35, 170, 0.6)",
+                }}
+                onFocus={(e) => { e.target.style.borderColor = "rgba(237,255,0,0.5)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "rgba(27,35,170,0.6)"; }}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-blue-200 mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium mb-1.5" style={{ color: "#d8d6d6" }}>
                 Wachtwoord
               </label>
               <input
@@ -105,18 +132,31 @@ function LoginForm() {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                className="w-full px-4 py-3 bg-blue-950/60 border border-blue-700/50 rounded-lg text-white placeholder-blue-500/50 focus:outline-none focus:border-yellow-400/70 focus:ring-1 focus:ring-yellow-400/50 transition-all text-sm"
+                className="w-full px-4 py-3 rounded-lg text-white text-sm transition-all outline-none"
+                style={{
+                  background: "rgba(15, 15, 112, 0.6)",
+                  border: "1px solid rgba(27, 35, 170, 0.6)",
+                }}
+                onFocus={(e) => { e.target.style.borderColor = "rgba(237,255,0,0.5)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "rgba(27,35,170,0.6)"; }}
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-yellow-400 hover:bg-yellow-300 disabled:bg-blue-800 disabled:text-blue-500 text-blue-950 font-bold rounded-lg transition-all duration-150 shadow-lg hover:shadow-yellow-400/20 disabled:cursor-not-allowed mt-2"
+              className="w-full py-3 px-4 rounded-lg font-bold text-sm transition-all duration-150 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: isLoading ? "rgba(237,255,0,0.6)" : "#edff00",
+                color: "#0f0f70",
+                fontFamily: "'Mont', 'Montserrat', sans-serif",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+              }}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-blue-950/30 border-t-blue-950 rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-midnite/30 border-t-midnite rounded-full animate-spin" style={{ borderTopColor: "#0f0f70" }} />
                   Inloggen…
                 </span>
               ) : (
@@ -126,7 +166,7 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-blue-500/60 text-xs mt-6">
+        <p className="text-center text-xs mt-6" style={{ color: "rgba(216,214,214,0.4)" }}>
           © {new Date().getFullYear()} REPP · Alleen voor intern gebruik
         </p>
       </div>
