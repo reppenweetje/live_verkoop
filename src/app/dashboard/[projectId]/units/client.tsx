@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { FloorPlanHeatmap } from "@/components/floor-plan-heatmap";
+import { getProjectConfig } from "@/lib/project-config";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export default function UnitsClient({ initialUnits, initialStats, projectId, directusProjectId, projectName, initialPinnedCounts }: Props) {
+  const config = getProjectConfig(projectId);
   const [units, setUnits] = useState(initialUnits);
   const [stats, setStats] = useState(initialStats);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -112,7 +114,7 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Status Units</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">Status {config.unitPlural}</h1>
             <p className="text-gray-400">{projectName}</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -122,7 +124,7 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
         </div>
 
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <KPICard title="Totaal Units"   value={stats.total}        icon={Building2}   accentColor="yellow" />
+          <KPICard title={`Totaal ${config.unitPlural}`} value={stats.total} icon={Building2} accentColor="yellow" />
           <KPICard title="Verkocht"       value={stats.verkocht}     subtitle={formatCurrency(stats.verkochtTotal)}     icon={TrendingUp}  accentColor="emerald" />
           <KPICard title="Gereserveerd"   value={stats.gereserveerd} subtitle={formatCurrency(stats.gereserveerdTotal)} icon={Clock}       accentColor="gold" />
           <KPICard title="Beschikbaar"    value={stats.beschikbaar}  icon={MapPin}      accentColor="blue" />
@@ -131,19 +133,19 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
         <Card className="mb-8">
           <div className="flex items-center gap-2 mb-5">
             <Heart size={18} className="text-yellow-400" />
-            <h2 className="text-lg font-bold text-white">Interesse per Unit</h2>
+            <h2 className="text-lg font-bold text-white">{config.interestLabel}</h2>
           </div>
           <FloorPlanHeatmap units={units} pinnedCounts={pinnedCounts} projectSlug={projectId} />
         </Card>
 
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-white mb-6">Units per Verdieping</h2>
+          <h2 className="text-xl font-bold text-white mb-6">{config.unitPlural} per {config.groupLabel}</h2>
           {Object.entries(unitsByFloor).map(([floor, floorUnits]) => (
             <div key={floor} className="mb-8">
               <h3 className="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-yellow-400/20 border border-yellow-400/50 flex items-center justify-center text-sm font-bold text-yellow-300">{floor}</span>
-                Verdieping {floor}
-                <span className="text-sm text-gray-500 font-normal ml-2">({floorUnits.length} units)</span>
+                {config.groupLabel} {floor}
+                <span className="text-sm text-gray-500 font-normal ml-2">({floorUnits.length} {config.unitPlural.toLowerCase()})</span>
               </h3>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {floorUnits.map((unit) => (

@@ -6,6 +6,7 @@ import { usePathname, useParams } from "next/navigation";
 import { Building2, BarChart3, Users, Radio, ChevronRight, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LogoutButton from "@/components/LogoutButton";
+import { getProjectConfig } from "@/lib/project-config";
 
 const SLUG_TO_LOGO: Record<string, string> = {
   "de-hofman": "/logos/de-hofman.svg",
@@ -20,10 +21,11 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   const projectId = params.projectId as string;
   const projectDisplayName = projectId.toUpperCase().replace(/-/g, " ");
   const logo = SLUG_TO_LOGO[projectId];
+  const config = getProjectConfig(projectId);
 
   const navItems = [
     { label: "Verkoopvoortgang", href: `/dashboard/${projectId}/verkoopvoortgang`, icon: TrendingUp, segment: "verkoopvoortgang", highlight: true },
-    { label: "Units",            href: `/dashboard/${projectId}/units`,            icon: Building2,  segment: "units" },
+    { label: config.navLabel,    href: `/dashboard/${projectId}/units`,            icon: Building2,  segment: "units" },
     { label: "Analytics",        href: `/dashboard/${projectId}/analytics`,        icon: BarChart3,  segment: "analytics" },
     { label: "Registraties",     href: `/dashboard/${projectId}/registrations`,    icon: Users,      segment: "registrations" },
     { label: "Live Tracking",    href: `/dashboard/${projectId}/live-tracking`,    icon: Radio,      segment: "live-tracking", badge: "Add-on" },
