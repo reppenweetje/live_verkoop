@@ -38,7 +38,39 @@ interface PortfolioStats {
   perProject: ProjectStat[];
 }
 
-const PRIMARY_SLUGS = ["de-hofman", "depaveri", "elster11"];
+// ─── Categoriestructuur ───────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  {
+    id: "project-r",
+    label: "Project R",
+    description: "Eigen ontwikkeling",
+    subcategories: [
+      {
+        id: "eigen",
+        label: null,
+        slugs: ["de-hofman"],
+      },
+    ],
+  },
+  {
+    id: "rapid",
+    label: "Rapid",
+    description: "Verkoop als dienst",
+    subcategories: [
+      {
+        id: "bedrijfsunits",
+        label: "Bedrijfsunits",
+        slugs: ["depaveri", "elster11"],
+      },
+      {
+        id: "garageboxen",
+        label: "Garageboxen",
+        slugs: ["6th-grid"],
+      },
+    ],
+  },
+];
 
 const SLUG_TO_LOGO: Record<string, string> = {
   "de-hofman": "/logos/de-hofman.svg",
@@ -52,6 +84,8 @@ const SLUG_TO_SALE_DATE: Record<string, string> = {
   depaveri:    "2026-04-15T20:00:00",
 };
 
+// ─── Portfolio overzicht ──────────────────────────────────────────────────────
+
 function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
   const soldPct      = portfolio.totalProjectValue > 0 ? (portfolio.verkochtTotal / portfolio.totalProjectValue) * 100 : 0;
   const reservedPct  = portfolio.totalProjectValue > 0 ? (portfolio.gereserveerdTotal / portfolio.totalProjectValue) * 100 : 0;
@@ -59,7 +93,6 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
 
   return (
     <div className="mb-12 rounded-2xl border border-yellow-400/15 bg-gradient-to-br from-blue-900/50 to-indigo-900/40 overflow-hidden">
-      {/* Header */}
       <div className="px-8 pt-8 pb-6 border-b border-blue-800/40">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
@@ -73,28 +106,19 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="mt-6">
           <div className="flex justify-between text-xs text-gray-400 mb-2">
             <span>Verkoopvoortgang</span>
             <span>{soldPct.toFixed(1)}% verkocht · {(soldPct + reservedPct).toFixed(1)}% incl. gereserveerd</span>
           </div>
           <div className="h-3 bg-blue-950/60 rounded-full overflow-hidden border border-blue-800/40">
-            {/* Gereserveerd (achtergrond, lichtgeel) */}
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${Math.min(soldPct + reservedPct, 100)}%`,
-                background: "linear-gradient(90deg, #34d399, #10b981, #fbbf24)",
-              }}
+              style={{ width: `${Math.min(soldPct + reservedPct, 100)}%`, background: "linear-gradient(90deg, #34d399, #10b981, #fbbf24)" }}
             />
           </div>
-          {/* Overlay verkocht */}
           <div className="relative -mt-3 h-3">
-            <div
-              className="absolute top-0 left-0 h-full rounded-full transition-all duration-700 bg-emerald-500"
-              style={{ width: `${Math.min(soldPct, 100)}%` }}
-            />
+            <div className="absolute top-0 left-0 h-full rounded-full transition-all duration-700 bg-emerald-500" style={{ width: `${Math.min(soldPct, 100)}%` }} />
           </div>
           <div className="flex gap-4 mt-2 text-xs">
             <span className="flex items-center gap-1.5 text-emerald-400"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Verkocht</span>
@@ -104,7 +128,6 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
         </div>
       </div>
 
-      {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 divide-x divide-y divide-blue-800/30">
         <div className="p-6 flex items-start gap-3">
           <div className="p-2 rounded-lg bg-emerald-900/30"><CheckCircle2 size={18} className="text-emerald-400" /></div>
@@ -140,7 +163,6 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
         </div>
       </div>
 
-      {/* Per-project breakdown */}
       {portfolio.perProject.length > 0 && (
         <div className="px-8 py-5 border-t border-blue-800/40">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Per project</p>
@@ -177,56 +199,53 @@ function PortfolioOverview({ portfolio }: { portfolio: PortfolioStats }) {
   );
 }
 
-function ProjectCard({ project, stat, isPrimary }: { project: DashboardProject; stat?: ProjectStat; isPrimary: boolean }) {
+// ─── Project Card ─────────────────────────────────────────────────────────────
+
+function ProjectCard({ project, stat }: { project: DashboardProject; stat?: ProjectStat }) {
   const logo     = SLUG_TO_LOGO[project.slug];
   const saleDate = SLUG_TO_SALE_DATE[project.slug] ?? project.saleStartsAt;
 
   return (
     <Link href={`/dashboard/${project.slug}/units`} className="h-full block">
-      <div className={cn(
-        "group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col",
-        isPrimary
-          ? "bg-gradient-to-br from-blue-900/60 to-indigo-900/60 border-yellow-400/20 hover:border-yellow-400/50"
-          : "bg-gradient-to-br from-blue-900/25 to-indigo-900/25 border-blue-800/40 hover:border-yellow-400/20"
-      )}>
+      <div className="group relative overflow-hidden rounded-2xl border border-yellow-400/20 hover:border-yellow-400/50 bg-gradient-to-br from-blue-900/60 to-indigo-900/60 transition-all duration-300 hover:shadow-2xl cursor-pointer h-full flex flex-col">
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-        <div className={cn("relative flex flex-col justify-between flex-1", isPrimary ? "p-8" : "p-6")}>
-          {logo && (
-            <div className="mb-5">
-              <Image src={logo} alt={project.name} width={220} height={40} className="h-8 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" />
-            </div>
-          )}
+        <div className="relative flex flex-col justify-between flex-1 p-7">
+          <div className="mb-5 h-8 flex items-center">
+            {logo
+              ? <Image src={logo} alt={project.name} width={220} height={40} className="h-8 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" />
+              : <span className="text-lg font-bold text-white">{project.name}</span>
+            }
+          </div>
 
           <div>
-            <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center justify-between mb-4">
               <p className="text-gray-500 text-xs">{project.slug}</p>
               {project.status === "live" && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 flex-shrink-0 ml-3">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30">
                   <span className="pulsing-dot" />
                   <span className="text-xs font-semibold text-yellow-300">Live</span>
                 </div>
               )}
             </div>
 
-            <div className={cn("space-y-2", isPrimary ? "mt-5" : "mt-3")}>
+            <div className="space-y-2">
               {saleDate && (
                 <div className="flex items-center gap-2.5">
                   <Zap size={14} className="text-yellow-400 flex-shrink-0" />
-                  <span className={cn("text-gray-300", isPrimary ? "text-sm" : "text-xs")}>
+                  <span className="text-sm text-gray-300">
                     Verkoopmoment: {format(new Date(saleDate), "d MMM HH:mm", { locale: nl })}
                   </span>
                 </div>
               )}
               <div className="flex items-center gap-2.5">
                 <Building2 size={14} className="text-yellow-400 flex-shrink-0" />
-                <span className={cn(isPrimary ? "text-sm" : "text-xs")}>
+                <span className="text-sm text-gray-300">
                   {stat ? `${stat.total} units · ${stat.beschikbaar} beschikbaar` : "Units dashboard"}
                 </span>
               </div>
             </div>
 
-            {/* Mini progress bar per kaart */}
             {stat && stat.totalProjectValue > 0 && (
               <div className="mt-4">
                 <div className="h-1.5 bg-blue-950/60 rounded-full overflow-hidden">
@@ -243,7 +262,7 @@ function ProjectCard({ project, stat, isPrimary }: { project: DashboardProject; 
             )}
           </div>
 
-          <div className={cn("border-t border-blue-800/40", isPrimary ? "mt-8 pt-6" : "mt-5 pt-4")}>
+          <div className="border-t border-blue-800/40 mt-6 pt-5">
             {project.status === "live" && (
               <span className="bg-yellow-400/10 text-yellow-300 border border-yellow-400/30 rounded-lg px-3 py-1 text-xs font-semibold">Live</span>
             )}
@@ -259,56 +278,74 @@ function ProjectCard({ project, stat, isPrimary }: { project: DashboardProject; 
         </div>
 
         <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="w-8 h-8 rounded-full bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center group-hover:scale-110 transition-transform text-yellow-300 text-sm">→</div>
+          <div className="w-8 h-8 rounded-full bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center text-yellow-300 text-sm">→</div>
         </div>
       </div>
     </Link>
   );
 }
 
+// ─── Hoofdcomponent ───────────────────────────────────────────────────────────
+
 export default function DashboardClient({ projects, portfolio }: { projects: DashboardProject[]; portfolio: PortfolioStats }) {
-  const primaryProjects = projects.filter((p) => PRIMARY_SLUGS.includes(p.slug));
-  const otherProjects   = projects.filter((p) => !PRIMARY_SLUGS.includes(p.slug));
+  const projectBySlug = Object.fromEntries(projects.map((p) => [p.slug, p]));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 px-6 py-12">
       <div className="max-w-7xl mx-auto">
+
         <div className="mb-10">
           <h1 className="text-4xl font-bold text-white mb-2">Projecten</h1>
           <p className="text-gray-400 text-lg">Selecteer een project om de dashboard te bekijken</p>
         </div>
 
-        {primaryProjects.length > 0 && (
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-10">
-            {primaryProjects.map((p) => (
-              <ProjectCard
-                key={p.id}
-                project={p}
-                stat={portfolio.perProject.find((s) => s.slug === p.slug)}
-                isPrimary
-              />
-            ))}
-          </div>
-        )}
+        {/* Categorieën */}
+        {CATEGORIES.map((category) => {
+          const categoryProjects = category.subcategories.flatMap((s) => s.slugs).map((slug) => projectBySlug[slug]).filter(Boolean);
+          if (categoryProjects.length === 0) return null;
+
+          return (
+            <div key={category.id} className="mb-12">
+              {/* Categorie header */}
+              <div className="flex items-baseline gap-3 mb-6">
+                <h2 className="text-2xl font-bold text-white">{category.label}</h2>
+                <span className="text-sm text-gray-500">{category.description}</span>
+              </div>
+
+              {/* Subcategorieën */}
+              {category.subcategories.map((sub) => {
+                const subProjects = sub.slugs.map((slug) => projectBySlug[slug]).filter(Boolean);
+                if (subProjects.length === 0) return null;
+
+                return (
+                  <div key={sub.id} className="mb-8">
+                    {sub.label && (
+                      <div className="flex items-center gap-3 mb-4">
+                        <p className="text-xs font-semibold text-yellow-400/60 uppercase tracking-widest">{sub.label}</p>
+                        <div className="flex-1 h-px bg-yellow-400/10" />
+                      </div>
+                    )}
+                    <div className={cn(
+                      "grid gap-6",
+                      subProjects.length === 1 ? "grid-cols-1 max-w-sm" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                    )}>
+                      {subProjects.map((project) => (
+                        <ProjectCard
+                          key={project.id}
+                          project={project}
+                          stat={portfolio.perProject.find((s) => s.slug === project.slug)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
 
         {/* Portfolio overzicht */}
         <PortfolioOverview portfolio={portfolio} />
-
-        {otherProjects.length > 0 && (
-          <>
-            <h2 className="text-xl font-semibold text-gray-300 mb-4">Overige projecten</h2>
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-              {otherProjects.map((p) => (
-                <ProjectCard
-                  key={p.id}
-                  project={p}
-                  stat={portfolio.perProject.find((s) => s.slug === p.slug)}
-                  isPrimary={false}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

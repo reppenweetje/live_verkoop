@@ -187,7 +187,7 @@ function isInternalEmail(email: string | null | undefined): boolean {
 
 // ─── API functies ─────────────────────────────────────────────────────────────
 
-const PRIMARY_SLUGS = ["de-hofman", "depaveri", "elster11"];
+const PRIMARY_SLUGS = ["de-hofman", "depaveri", "elster11", "6th-grid"];
 
 export async function getProjectBySlug(slug: string): Promise<DashboardProject | null> {
   try {

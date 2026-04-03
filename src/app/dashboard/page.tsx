@@ -8,12 +8,13 @@ const SLUG_TO_PROJECT_ID: Record<string, number> = {
   "de-hofman": 5,
   depaveri:    8,
   elster11:    7,
+  "6th-grid":  11,
 };
 
 export default async function DashboardPage() {
   const projects = await getAllProjects();
 
-  // Parallel units ophalen voor alle primaire projecten
+  // Parallel units ophalen voor alle projecten
   const projectStats = await Promise.all(
     projects.map(async (project) => {
       const directusId = SLUG_TO_PROJECT_ID[project.slug];
