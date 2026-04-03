@@ -55,7 +55,7 @@ const CATEGORIES = [
   },
   {
     id: "rapid",
-    label: "Rapid",
+    label: "Reppit",
     description: "Verkoop als dienst",
     subcategories: [
       {
