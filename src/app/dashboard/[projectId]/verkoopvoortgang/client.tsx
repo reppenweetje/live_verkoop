@@ -75,24 +75,34 @@ function ActivityTicker({ events }: { events: ActivityEvent[] }) {
   const hasActivity = events.length > 0;
   const items = hasActivity
     ? events
-    : [{ id: "p1", text: "Verkoopmoment live", status: "beschikbaar" as UnitStatus, time: new Date() },
-       { id: "p2", text: "Wacht op eerste verkoop of reservering", status: "beschikbaar" as UnitStatus, time: new Date() }];
+    : [{ id: "p1", text: "Wacht op activiteit...", status: "beschikbaar" as UnitStatus, time: new Date() }];
 
-  // Snelheid: meer events = sneller (min 5s, max 28s)
-  const speed = hasActivity ? Math.max(5, 28 - events.length * 2.5) : 28;
+  const speed = hasActivity ? Math.max(18, 45 - events.length * 3) : 45;
   const doubled = [...items, ...items];
 
   return (
-    <div className="w-full overflow-hidden flex items-center" style={{ background: "#000", height: 52, borderBottom: "2px solid #edff00" }}>
+    <div
+      className="w-full flex items-center"
+      style={{
+        background: "rgba(15,15,80,0.95)",
+        height: 38,
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
       {/* LIVE badge */}
-      <div className="relative flex-shrink-0 flex items-center gap-2 px-4 h-full" style={{ background: "#edff00", minWidth: 80 }}>
-        <span className="absolute inset-0 animate-ping" style={{ background: "#edff00", opacity: 0.3 }} />
-        <span className="w-2.5 h-2.5 rounded-full relative z-10" style={{ background: "#000" }} />
-        <span className="text-sm font-black tracking-widest uppercase relative z-10" style={{ color: "#000", fontFamily: "'Montserrat',sans-serif" }}>LIVE</span>
+      <div className="flex-shrink-0 flex items-center gap-1.5 px-3 h-full" style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="text-xs font-bold tracking-widest" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Montserrat',sans-serif" }}>LIVE</span>
       </div>
 
-      {/* Scrollende items */}
-      <div className="flex-1 overflow-hidden">
+      {/* Scrollende items met fade aan de randen */}
+      <div
+        className="flex-1 overflow-hidden"
+        style={{
+          maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+        }}
+      >
         <div
           className="flex items-center whitespace-nowrap"
           style={{ animation: `ticker-scroll ${speed}s linear infinite` }}
@@ -100,35 +110,23 @@ function ActivityTicker({ events }: { events: ActivityEvent[] }) {
           {doubled.map((event, i) => {
             const isSold     = event.status === "verkocht";
             const isReserved = event.status === "gereserveerd";
-            const color      = isSold ? "#00ff88" : isReserved ? "#edff00" : "#444";
-            const glow       = isSold
-              ? "0 0 20px rgba(0,255,136,0.9), 0 0 40px rgba(0,255,136,0.4)"
-              : isReserved
-              ? "0 0 20px rgba(237,255,0,0.9), 0 0 40px rgba(237,255,0,0.4)"
-              : "none";
             return (
-              <span key={`${event.id}-${i}`} className="inline-flex items-center gap-3 px-8">
-                {isSold     && <span style={{ fontSize: 22 }}>💰</span>}
-                {isReserved && <span style={{ fontSize: 22 }}>⚡</span>}
-                {!isSold && !isReserved && <span style={{ color: "#333", fontSize: 18 }}>●</span>}
-                <span
-                  className="font-black uppercase tracking-widest"
-                  style={{
-                    color,
-                    textShadow: glow,
-                    fontFamily: "'Montserrat',sans-serif",
-                    fontSize: isSold || isReserved ? 15 : 12,
-                    letterSpacing: "0.12em",
-                  }}
-                >
+              <span key={`${event.id}-${i}`} className="inline-flex items-center gap-2 px-6 text-xs">
+                {isSold     && <span>💰</span>}
+                {isReserved && <span>⚡</span>}
+                <span style={{
+                  color: isSold ? "#4ade80" : isReserved ? "#facc15" : "rgba(255,255,255,0.25)",
+                  fontWeight: isSold || isReserved ? 600 : 400,
+                  fontFamily: "'Montserrat',sans-serif",
+                }}>
                   {event.text}
                 </span>
                 {(isSold || isReserved) && (
-                  <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginLeft: 2 }}>
-                    {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
+                  <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>
+                    · {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
                   </span>
                 )}
-                <span style={{ color: "#edff00", opacity: 0.3, marginLeft: 12, fontSize: 10 }}>◆◆</span>
+                <span style={{ color: "rgba(255,255,255,0.1)", marginLeft: 8 }}>·</span>
               </span>
             );
           })}
