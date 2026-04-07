@@ -259,7 +259,7 @@ export default function VerkoopvoortgangClient({
     pollActiveLeads(); // direct ophalen bij mount
     const unitsInterval    = setInterval(pollUnits, 2000);
     const visitorsInterval = setInterval(pollVisitors, 15000);
-    const leadsInterval    = setInterval(pollActiveLeads, 30000);
+    const leadsInterval    = setInterval(pollActiveLeads, 3000);
     return () => {
       clearInterval(unitsInterval);
       clearInterval(visitorsInterval);
@@ -466,7 +466,7 @@ export default function VerkoopvoortgangClient({
               <p className="text-xl font-black text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>
                 {activeLeads.length} <span className="text-sm font-normal text-gray-400">lead{activeLeads.length !== 1 ? "s" : ""}</span>
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">favorietactiviteit · 30 min</p>
+              <p className="text-xs text-gray-500 mt-0.5">actief · laatste 5 min</p>
             </div>
           </div>
 
@@ -604,7 +604,7 @@ export default function VerkoopvoortgangClient({
               )}
 
               <p className="text-xs text-gray-600 mt-3 pt-2 border-t border-blue-800/30">
-                Op basis van favorietactiviteit · laatste 30 min
+                Actief in Directus · laatste 5 min · elke 3s
               </p>
             </div>
           </div>

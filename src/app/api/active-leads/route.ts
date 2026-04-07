@@ -30,12 +30,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectSlug = searchParams.get("projectSlug") ?? "";
   // Actief = pinned_changed_at in de laatste 30 minuten
-  const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
   try {
+    // Gebruik Directus _or filter: actief als pinned_changed_at OF updated_at binnen 5 min
     const params = new URLSearchParams({
-      "filter[pinned_changed_at][_gte]": since,
-      "fields": "id,first_name,last_name,email,pinned_changed_at,tags,favourites",
+      "filter[_or][0][pinned_changed_at][_gte]": since,
+      "filter[_or][1][updated_at][_gte]":        since,
+      "fields": "id,first_name,last_name,email,pinned_changed_at,updated_at,tags,favourites",
       "limit": "100",
       "sort": "-pinned_changed_at",
     });
@@ -58,7 +60,8 @@ export async function GET(request: Request) {
       first_name: string;
       last_name: string;
       email: string;
-      pinned_changed_at: string;
+      pinned_changed_at: string | null;
+      updated_at: string | null;
       tags: string[];
       favourites: string[] | null;
     }> = json.data ?? [];
@@ -69,15 +72,21 @@ export async function GET(request: Request) {
         if (!projectSlug) return true;
         return Array.isArray(c.tags) && c.tags.includes(projectSlug);
       })
-      .map((c): ActiveLead => ({
-        id: c.id,
-        firstName: c.first_name ?? "",
-        lastName: c.last_name ?? "",
-        email: c.email,
-        lastActiveAt: c.pinned_changed_at,
-        favouriteCount: Array.isArray(c.favourites) ? c.favourites.length : 0,
-        tags: c.tags ?? [],
-      }));
+      .map((c): ActiveLead => {
+        // Meest recente activiteit gebruiken als "laatste actief" timestamp
+        const ts1 = c.pinned_changed_at ? new Date(c.pinned_changed_at).getTime() : 0;
+        const ts2 = c.updated_at        ? new Date(c.updated_at).getTime()        : 0;
+        const lastActiveAt = ts1 >= ts2 ? (c.pinned_changed_at ?? c.updated_at ?? "") : (c.updated_at ?? "");
+        return {
+          id: c.id,
+          firstName: c.first_name ?? "",
+          lastName: c.last_name ?? "",
+          email: c.email,
+          lastActiveAt,
+          favouriteCount: Array.isArray(c.favourites) ? c.favourites.length : 0,
+          tags: c.tags ?? [],
+        };
+      });
 
     return NextResponse.json({ activeLeads: filtered });
   } catch (err) {
