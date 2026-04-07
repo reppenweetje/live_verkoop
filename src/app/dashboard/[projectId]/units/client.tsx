@@ -54,14 +54,24 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinnedCounts, setPinnedCounts] = useState(initialPinnedCounts);
+  const [pinnedLeads, setPinnedLeads] = useState<Record<number, { id: number; name: string; totalFavourites: number }[]>>({});
+
+  useEffect(() => {
+    // Eenmalig leads ophalen bij mount (minder kritisch qua frequentie)
+    fetch(`/api/pinned-leads?projectId=${directusProjectId}`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.leads) setPinnedLeads(d.leads); })
+      .catch(() => {});
+  }, [directusProjectId]);
 
   useEffect(() => {
     const poll = async () => {
       try {
         setIsRefreshing(true);
-        const [unitsRes, pinnedRes] = await Promise.all([
+        const [unitsRes, pinnedRes, leadsRes] = await Promise.all([
           fetch(`/api/units?projectId=${directusProjectId}`, { cache: "no-store" }),
           fetch(`/api/pinned-units?projectId=${directusProjectId}`, { cache: "no-store" }),
+          fetch(`/api/pinned-leads?projectId=${directusProjectId}`, { cache: "no-store" }),
         ]);
         if (unitsRes.ok) {
           const data = await unitsRes.json();
@@ -71,6 +81,10 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
         if (pinnedRes.ok) {
           const data = await pinnedRes.json();
           setPinnedCounts(data.counts ?? {});
+        }
+        if (leadsRes.ok) {
+          const data = await leadsRes.json();
+          setPinnedLeads(data.leads ?? {});
         }
         setLastUpdated(new Date());
       } catch {} finally {
@@ -135,7 +149,7 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
             <Heart size={18} className="text-yellow-400" />
             <h2 className="text-lg font-bold text-white">{config.interestLabel}</h2>
           </div>
-          <FloorPlanHeatmap units={units} pinnedCounts={pinnedCounts} projectSlug={projectId} />
+          <FloorPlanHeatmap units={units} pinnedCounts={pinnedCounts} pinnedLeads={pinnedLeads} projectSlug={projectId} />
         </Card>
 
         <div className="mb-8">

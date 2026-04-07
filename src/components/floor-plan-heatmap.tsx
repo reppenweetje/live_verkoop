@@ -1,7 +1,113 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
+import type { PinnedLeadEntry } from "@/lib/directus";
+
+interface UnitLeadsModalProps {
+  unitCode: string;
+  leads: PinnedLeadEntry[];
+  onClose: () => void;
+}
+
+function UnitLeadsModal({ unitCode, leads, onClose }: UnitLeadsModalProps) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative rounded-2xl shadow-2xl w-full max-w-sm mx-4"
+        style={{ background: "#0f1a5c", border: "1px solid rgba(237,255,0,0.15)", padding: "24px" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(237,255,0,0.6)" }}>
+              Interesse
+            </p>
+            <h3 className="text-xl font-black text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>
+              {unitCode}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Teller */}
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg" style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.15)" }}>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+          <span className="text-sm font-semibold text-emerald-300">
+            {leads.length === 0 ? "Nog geen interesse" : `${leads.length} lead${leads.length !== 1 ? "s" : ""} geïnteresseerd`}
+          </span>
+        </div>
+
+        {/* Lijst */}
+        {leads.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">Niemand heeft deze unit (nog) gefavoriet.</p>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {leads.map((lead) => {
+              const isExclusive = lead.totalFavourites === 1;
+              return (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                  style={{
+                    background: isExclusive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.04)",
+                    border: isExclusive ? "1px solid rgba(251,191,36,0.25)" : "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={{
+                        background: isExclusive ? "rgba(251,191,36,0.2)" : "rgba(99,102,241,0.3)",
+                        color: isExclusive ? "#fbbf24" : "#a5b4fc",
+                      }}
+                    >
+                      {lead.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: isExclusive ? "#fbbf24" : "#e2e8f0", fontFamily: "'Montserrat',sans-serif" }}
+                    >
+                      {lead.name}
+                    </span>
+                  </div>
+                  {isExclusive && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24" }}>
+                      enige keuze
+                    </span>
+                  )}
+                  {!isExclusive && (
+                    <span className="text-xs text-gray-500">{lead.totalFavourites} fav.</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <p className="text-xs text-gray-600 mt-4 text-center">
+          Goud = deze unit is hun enige favoriet
+        </p>
+      </div>
+    </div>
+  );
+}
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -70,8 +176,9 @@ function getCellStyle(count: number, max: number, status: UnitStatus | undefined
   return                 { bg: "#713f12", numColor: "#fde68a", countColor: "#fbbf24", opacity: "1" };
 }
 
-function UnitCell({ unit, count, maxCount, style: cellBorder, codeLabel }: {
+function UnitCell({ unit, count, maxCount, style: cellBorder, codeLabel, onClick }: {
   unit: DashboardUnit; count: number; maxCount: number; style?: React.CSSProperties; codeLabel?: string;
+  onClick?: () => void;
 }) {
   const s = getCellStyle(count, maxCount, unit.status);
   const displayCode = codeLabel ?? unit.code;
@@ -82,11 +189,12 @@ function UnitCell({ unit, count, maxCount, style: cellBorder, codeLabel }: {
   return (
     <div
       title={`${displayCode}${count > 0 ? ` — ${count} lead${count !== 1 ? "s" : ""} geïnteresseerd` : " — geen interesse"}`}
+      onClick={onClick}
       style={{ flex: 1, ...cellBorder, backgroundColor: s.bg, opacity: s.opacity as any,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: "6px", cursor: "default", position: "relative", transition: "filter 0.15s",
+        padding: "6px", cursor: onClick ? "pointer" : "default", position: "relative", transition: "filter 0.15s",
         minWidth: 0, minHeight: 0 }}
-      className="hover:brightness-125"
+      className="hover:brightness-125 active:brightness-150"
     >
       <span style={{ color: s.numColor, fontSize: "clamp(13px,2.2vw,26px)", fontWeight: 700, lineHeight: 1 }}>
         {displayCode}
@@ -100,11 +208,18 @@ function UnitCell({ unit, count, maxCount, style: cellBorder, codeLabel }: {
   );
 }
 
-function PaveriFloorPlan({ unitMap, pinnedCounts, maxCount }: {
+function PaveriFloorPlan({ unitMap, pinnedCounts, maxCount, pinnedLeads, onUnitClick }: {
   unitMap: Map<number, DashboardUnit>; pinnedCounts: Record<number, number>; maxCount: number;
+  pinnedLeads?: Record<number, PinnedLeadEntry[]>; onUnitClick?: (unit: DashboardUnit, leads: PinnedLeadEntry[]) => void;
 }) {
   const cfg = PAVERI_LAYOUT;
   const BORDER = "2px solid rgba(255,255,255,0.15)";
+
+  const handleClick = (unit: DashboardUnit) => {
+    if (onUnitClick && unit.status !== "coming_soon") {
+      onUnitClick(unit, pinnedLeads?.[Number(unit.id)] ?? []);
+    }
+  };
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: BORDER, display: "flex", height: 280, gap: 0 }}>
@@ -113,14 +228,14 @@ function PaveriFloorPlan({ unitMap, pinnedCounts, maxCount }: {
           {cfg.topRow.map((n, i) => {
             const unit = unitMap.get(n);
             if (!unit) return <div key={n} style={{ flex: 1, background: "#0f172a", borderLeft: i > 0 ? BORDER : undefined }} />;
-            return <UnitCell key={unit.id} unit={unit} count={pinnedCounts[Number(unit.id)] ?? 0} maxCount={maxCount} style={{ borderLeft: i > 0 ? BORDER : undefined }} />;
+            return <UnitCell key={unit.id} unit={unit} count={pinnedCounts[Number(unit.id)] ?? 0} maxCount={maxCount} style={{ borderLeft: i > 0 ? BORDER : undefined }} onClick={() => handleClick(unit)} />;
           })}
         </div>
         <div style={{ display: "flex", flex: cfg.bottomFlex, gap: 0 }}>
           {cfg.bottomRow.map((n, i) => {
             const unit = unitMap.get(n);
             if (!unit) return <div key={n} style={{ flex: 1, background: "#0f172a", borderLeft: i > 0 ? BORDER : undefined }} />;
-            return <UnitCell key={unit.id} unit={unit} count={pinnedCounts[Number(unit.id)] ?? 0} maxCount={maxCount} style={{ borderLeft: i > 0 ? BORDER : undefined }} />;
+            return <UnitCell key={unit.id} unit={unit} count={pinnedCounts[Number(unit.id)] ?? 0} maxCount={maxCount} style={{ borderLeft: i > 0 ? BORDER : undefined }} onClick={() => handleClick(unit)} />;
           })}
         </div>
       </div>
@@ -129,18 +244,23 @@ function PaveriFloorPlan({ unitMap, pinnedCounts, maxCount }: {
           const flexVal = i === 0 ? cfg.topFlex : Math.round(cfg.bottomFlex / (cfg.rightCol.length - 1));
           const unit = unitMap.get(n);
           if (!unit) return <div key={n} style={{ flex: flexVal, background: "#0f172a", borderTop: i > 0 ? BORDER : undefined }} />;
-          return <UnitCell key={unit.id} unit={unit} count={pinnedCounts[Number(unit.id)] ?? 0} maxCount={maxCount} style={{ flex: flexVal, borderTop: i > 0 ? BORDER : undefined }} />;
+          return <UnitCell key={unit.id} unit={unit} count={pinnedCounts[Number(unit.id)] ?? 0} maxCount={maxCount} style={{ flex: flexVal, borderTop: i > 0 ? BORDER : undefined }} onClick={() => handleClick(unit)} />;
         })}
       </div>
     </div>
   );
 }
 
-function Elster11FloorPlan({ unitMap, pinnedCounts, maxCount }: {
+function Elster11FloorPlan({ unitMap, pinnedCounts, maxCount, pinnedLeads, onUnitClick }: {
   unitMap: Map<number, DashboardUnit>; pinnedCounts: Record<number, number>; maxCount: number;
+  pinnedLeads?: Record<number, PinnedLeadEntry[]>; onUnitClick?: (unit: DashboardUnit, leads: PinnedLeadEntry[]) => void;
 }) {
   return (
-    <svg viewBox="125 115 1200 715" style={{ width: "100%", display: "block", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.15)", background: "#0f172a" }} aria-label="Elster 11 plattegrond">
+    <svg
+      viewBox="125 115 1200 715"
+      style={{ width: "100%", display: "block", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.15)", background: "#0f172a" }}
+      aria-label="Elster 11 plattegrond"
+    >
       {ELSTER11_SHAPES.map((shape) => {
         const unit = unitMap.get(shape.n);
         const count = unit ? (pinnedCounts[Number(unit.id)] ?? 0) : 0;
@@ -149,6 +269,7 @@ function Elster11FloorPlan({ unitMap, pinnedCounts, maxCount }: {
         const isReserved = unit?.status === "gereserveerd";
         const isComingSoon = unit?.status === "coming_soon";
         const subLabel = isComingSoon ? "binnenkort" : isSold ? "✓ verkocht" : isReserved ? "◷ reserv." : count > 0 ? `${count}×` : "—";
+        const clickable = unit && !isComingSoon;
 
         let cx: number, cy: number, dotX: number, dotY: number;
         if (shape.kind === "rect") {
@@ -161,7 +282,11 @@ function Elster11FloorPlan({ unitMap, pinnedCounts, maxCount }: {
         }
 
         return (
-          <g key={shape.n}>
+          <g
+            key={shape.n}
+            style={{ cursor: clickable ? "pointer" : "default" }}
+            onClick={() => { if (clickable && onUnitClick) onUnitClick(unit!, pinnedLeads?.[Number(unit!.id)] ?? []); }}
+          >
             {shape.kind === "rect"
               ? <rect x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={s.bg} stroke="rgba(255,255,255,0.18)" strokeWidth="2" opacity={s.opacity} />
               : <polygon points={shape.pts} fill={s.bg} stroke="rgba(255,255,255,0.18)" strokeWidth="2" opacity={s.opacity} />}
@@ -223,11 +348,18 @@ function RankedList({ units, pinnedCounts, maxCount, config }: {
 interface FloorPlanHeatmapProps {
   units: DashboardUnit[];
   pinnedCounts: Record<number, number>;
+  pinnedLeads?: Record<number, PinnedLeadEntry[]>;
   projectSlug: string;
 }
 
-export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlanHeatmapProps) {
+export function FloorPlanHeatmap({ units, pinnedCounts, pinnedLeads, projectSlug }: FloorPlanHeatmapProps) {
   const config = getProjectConfig(projectSlug);
+  const [modal, setModal] = useState<{ unit: DashboardUnit; leads: PinnedLeadEntry[] } | null>(null);
+
+  const handleUnitClick = useCallback((unit: DashboardUnit, leads: PinnedLeadEntry[]) => {
+    setModal({ unit, leads });
+  }, []);
+
   const sorted = useMemo(() =>
     [...units].sort((a, b) => {
       const na = parseInt(a.code.replace(/\D/g, ""), 10) || 0;
@@ -250,7 +382,7 @@ export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlan
 
   if (sorted.length === 0) return null;
 
-  const isPaveri  = projectSlug === "depaveri";
+  const isPaveri   = projectSlug === "depaveri";
   const isElster11 = projectSlug === "elster11";
   const columns = sorted.length <= 7 ? sorted.length : 7;
   const rows: DashboardUnit[][] = [];
@@ -262,6 +394,14 @@ export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlan
 
   return (
     <div className="space-y-6">
+      {modal && (
+        <UnitLeadsModal
+          unitCode={formatUnitCode(modal.unit.code, config)}
+          leads={modal.leads}
+          onClose={() => setModal(null)}
+        />
+      )}
+
       <div className="flex items-center gap-5 flex-wrap text-xs">
         <LegendItem bg="#450a0a" border="#7f1d1d" label="Nog geen favorieten" />
         <LegendItem bg="#713f00" border="#854d00" label="Gereserveerd" />
@@ -269,9 +409,9 @@ export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlan
       </div>
 
       {isPaveri ? (
-        <PaveriFloorPlan unitMap={unitMap} pinnedCounts={pinnedCounts} maxCount={maxCount} />
+        <PaveriFloorPlan unitMap={unitMap} pinnedCounts={pinnedCounts} maxCount={maxCount} pinnedLeads={pinnedLeads} onUnitClick={handleUnitClick} />
       ) : isElster11 ? (
-        <Elster11FloorPlan unitMap={unitMap} pinnedCounts={pinnedCounts} maxCount={maxCount} />
+        <Elster11FloorPlan unitMap={unitMap} pinnedCounts={pinnedCounts} maxCount={maxCount} pinnedLeads={pinnedLeads} onUnitClick={handleUnitClick} />
       ) : (
         <div className="rounded-lg overflow-hidden" style={{ border: "2px solid rgba(255,255,255,0.15)", display: "inline-grid", gridTemplateRows: `repeat(${rows.length}, 1fr)`, width: "100%" }}>
           {rows.map((row, rowIdx) => (
@@ -280,7 +420,14 @@ export function FloorPlanHeatmap({ units, pinnedCounts, projectSlug }: FloorPlan
                 const unit = row[colIdx];
                 if (!unit) return <div key={`empty-${colIdx}`} style={{ borderLeft: colIdx > 0 ? "2px solid rgba(255,255,255,0.15)" : undefined, background: "#0f172a", aspectRatio: "1" }} />;
                 const count = pinnedCounts[Number(unit.id)] ?? 0;
-                return <UnitCell key={unit.id} unit={unit} count={count} maxCount={maxCount} codeLabel={formatUnitCode(unit.code, config)} style={{ borderLeft: colIdx > 0 ? "2px solid rgba(255,255,255,0.15)" : undefined, aspectRatio: "1" }} />;
+                const codeLabel = formatUnitCode(unit.code, config);
+                return (
+                  <UnitCell
+                    key={unit.id} unit={unit} count={count} maxCount={maxCount} codeLabel={codeLabel}
+                    style={{ borderLeft: colIdx > 0 ? "2px solid rgba(255,255,255,0.15)" : undefined, aspectRatio: "1" }}
+                    onClick={unit.status !== "coming_soon" ? () => handleUnitClick(unit, pinnedLeads?.[Number(unit.id)] ?? []) : undefined}
+                  />
+                );
               })}
             </div>
           ))}

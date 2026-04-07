@@ -279,6 +279,51 @@ export async function getCustomersByIds(ids: number[]): Promise<DirectusCustomer
   );
 }
 
+export interface PinnedLeadEntry {
+  id: number;
+  name: string;
+  totalFavourites: number; // totaal aantal gepinde units van deze lead (over dit project)
+}
+
+// Geeft per unit_id een lijst van leads die die unit hebben gepind
+export async function getPinnedLeadsByUnit(
+  projectId: number
+): Promise<Record<number, PinnedLeadEntry[]>> {
+  try {
+    const pins = await getPinnedUnitsForProject(projectId);
+
+    const customerIds = [...new Set(pins.map((p) => p.customer_id))];
+    if (customerIds.length === 0) return {};
+
+    // Haal klanten op inclusief favourites veld voor totaal-telling
+    const raw = await directusFetch<Array<{
+      id: number; first_name: string; last_name: string; email: string; favourites: unknown[];
+    }>>(
+      `/items/customers?filter%5Bid%5D%5B_in%5D=${customerIds.join(",")}&fields=id,first_name,last_name,email,favourites&limit=500`
+    );
+
+    const customerMap = new Map(raw.map((c) => [c.id, c]));
+
+    const result: Record<number, PinnedLeadEntry[]> = {};
+    for (const pin of pins) {
+      const customer = customerMap.get(pin.customer_id);
+      if (!customer || isInternalEmail(customer.email)) continue;
+      if (!result[pin.unit_id]) result[pin.unit_id] = [];
+      // Voorkom dubbelen (één lead kan meerdere pinnen voor dezelfde unit hebben)
+      if (!result[pin.unit_id].some((e) => e.id === customer.id)) {
+        result[pin.unit_id].push({
+          id: customer.id,
+          name: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || customer.email,
+          totalFavourites: Array.isArray(customer.favourites) ? customer.favourites.length : 0,
+        });
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
 export async function getRegistrationsForProject(
   projectId: number
 ): Promise<DashboardRegistration[]> {
