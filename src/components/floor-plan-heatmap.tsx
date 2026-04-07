@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
 import type { PinnedLeadEntry } from "@/lib/directus";
 
@@ -17,10 +18,12 @@ function UnitLeadsModal({ unitCode, leads, onClose }: UnitLeadsModalProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  return (
+  // Portal naar document.body zodat fixed positioning altijd het volledige viewport dekt,
+  // ongeacht overflow/stacking context van parent elementen
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
       <div
@@ -105,7 +108,8 @@ function UnitLeadsModal({ unitCode, leads, onClose }: UnitLeadsModalProps) {
           Goud = deze unit is hun enige favoriet
         </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
