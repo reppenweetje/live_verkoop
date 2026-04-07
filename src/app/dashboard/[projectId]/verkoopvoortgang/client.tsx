@@ -162,8 +162,8 @@ export default function VerkoopvoortgangClient({
   }, [projectId]);
 
   useEffect(() => {
-    const unitsInterval    = setInterval(pollUnits, 15000);
-    const visitorsInterval = setInterval(pollVisitors, 30000);
+    const unitsInterval    = setInterval(pollUnits, 5000);
+    const visitorsInterval = setInterval(pollVisitors, 15000);
     return () => { clearInterval(unitsInterval); clearInterval(visitorsInterval); };
   }, [pollUnits, pollVisitors]);
 

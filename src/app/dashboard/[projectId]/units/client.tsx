@@ -77,7 +77,7 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
         setIsRefreshing(false);
       }
     };
-    const interval = setInterval(poll, 30000);
+    const interval = setInterval(poll, 5000);
     return () => clearInterval(interval);
   }, [directusProjectId]);
 
