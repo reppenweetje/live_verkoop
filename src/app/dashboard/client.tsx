@@ -74,6 +74,9 @@ const CATEGORIES = [
   },
 ];
 
+// Test-projecten — apart weergegeven, NIET in portfolio
+const TEST_SLUGS = ["test"];
+
 const SLUG_TO_LOGO: Record<string, string> = {
   "de-hofman": "/logos/de-hofman.svg",
   depaveri:    "/logos/depaveri.svg",
@@ -392,6 +395,34 @@ export default function DashboardClient({ projects, portfolio }: { projects: Das
             </div>
           );
         })}
+
+        {/* Test omgeving — apart, buiten portfolio */}
+        {(() => {
+          const testProjects = TEST_SLUGS.map((s) => projectBySlug[s]).filter(Boolean);
+          if (testProjects.length === 0) return null;
+          return (
+            <div className="mb-12">
+              <div className="flex items-baseline gap-3 mb-6">
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wide" style={{ fontFamily: "'Montserrat',sans-serif" }}>Test</h2>
+                <span className="text-sm" style={{ color: "rgba(216,214,214,0.6)" }}>Testomgeving · niet in portfolio</span>
+                <span className="ml-2 px-2 py-0.5 rounded text-xs font-bold" style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>DEV</span>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(237,255,0,0.5)", fontFamily: "'Montserrat',sans-serif" }}>Bedrijfsunits</p>
+                <div className="flex-1 h-px" style={{ background: "rgba(237,255,0,0.1)" }} />
+              </div>
+              <div className="grid gap-6 grid-cols-1 max-w-sm">
+                {testProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    stat={undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Portfolio overzicht */}
         <PortfolioOverview portfolio={portfolio} />

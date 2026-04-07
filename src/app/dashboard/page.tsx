@@ -9,7 +9,11 @@ const SLUG_TO_PROJECT_ID: Record<string, number> = {
   depaveri:    8,
   elster11:    7,
   "6th-grid":  11,
+  test:        10,
 };
+
+// Slugs die NIET meegenomen worden in portfolio totalen
+const PORTFOLIO_EXCLUDED = new Set(["test"]);
 
 export default async function DashboardPage() {
   const projects = await getAllProjects();
@@ -27,16 +31,19 @@ export default async function DashboardPage() {
 
   const validStats = projectStats.filter(Boolean) as NonNullable<typeof projectStats[0]>[];
 
-  // Gecombineerde portfolio statistieken
+  // Alleen niet-test projecten in portfolio optellen
+  const portfolioStats = validStats.filter((p) => !PORTFOLIO_EXCLUDED.has(p.slug));
+
+  // Gecombineerde portfolio statistieken (test uitgesloten)
   const portfolio = {
-    totalProjectValue:  validStats.reduce((s, p) => s + p.totalProjectValue, 0),
-    verkochtTotal:      validStats.reduce((s, p) => s + p.verkochtTotal, 0),
-    gereserveerdTotal:  validStats.reduce((s, p) => s + p.gereserveerdTotal, 0),
-    verkocht:           validStats.reduce((s, p) => s + p.verkocht, 0),
-    gereserveerd:       validStats.reduce((s, p) => s + p.gereserveerd, 0),
-    beschikbaar:        validStats.reduce((s, p) => s + p.beschikbaar, 0),
-    totalUnits:         validStats.reduce((s, p) => s + p.total, 0),
-    perProject:         validStats,
+    totalProjectValue:  portfolioStats.reduce((s, p) => s + p.totalProjectValue, 0),
+    verkochtTotal:      portfolioStats.reduce((s, p) => s + p.verkochtTotal, 0),
+    gereserveerdTotal:  portfolioStats.reduce((s, p) => s + p.gereserveerdTotal, 0),
+    verkocht:           portfolioStats.reduce((s, p) => s + p.verkocht, 0),
+    gereserveerd:       portfolioStats.reduce((s, p) => s + p.gereserveerd, 0),
+    beschikbaar:        portfolioStats.reduce((s, p) => s + p.beschikbaar, 0),
+    totalUnits:         portfolioStats.reduce((s, p) => s + p.total, 0),
+    perProject:         portfolioStats,
   };
 
   return <DashboardClient projects={projects} portfolio={portfolio} />;
