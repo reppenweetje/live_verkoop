@@ -72,52 +72,70 @@ function useLiveTimer(startAt?: string) {
 }
 
 function ActivityTicker({ events }: { events: ActivityEvent[] }) {
-  const items = events.length > 0
+  const hasActivity = events.length > 0;
+  const items = hasActivity
     ? events
     : [{ id: "placeholder", text: "Wacht op activiteit tijdens het verkoopmoment...", status: "beschikbaar" as UnitStatus, time: new Date() }];
 
-  // Dupliceer voor naadloze loop
+  // Snelheid: meer events = sneller scrollen (min 6s, max 30s per cycle)
+  const speed = hasActivity ? Math.max(6, 30 - events.length * 2) : 30;
   const doubled = [...items, ...items];
 
   return (
     <div
-      className="w-full overflow-hidden flex items-center gap-0"
+      className="w-full overflow-hidden flex items-center"
       style={{
-        background: "rgba(15,15,112,0.9)",
-        borderBottom: "1px solid rgba(237,255,0,0.15)",
-        height: 38,
+        background: "rgba(10,10,80,0.97)",
+        borderBottom: "2px solid rgba(237,255,0,0.25)",
+        height: 46,
       }}
     >
       {/* LIVE badge */}
-      <div className="flex-shrink-0 flex items-center gap-1.5 px-3 h-full" style={{ borderRight: "1px solid rgba(237,255,0,0.15)", background: "rgba(237,255,0,0.08)" }}>
-        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#edff00", fontFamily: "'Montserrat',sans-serif" }}>Live</span>
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 h-full" style={{ borderRight: "2px solid rgba(237,255,0,0.2)", background: "rgba(237,255,0,0.12)", minWidth: 72 }}>
+        <span className="w-2 h-2 rounded-full animate-ping absolute" style={{ background: "#edff00", opacity: 0.6 }} />
+        <span className="w-2 h-2 rounded-full relative" style={{ background: "#edff00" }} />
+        <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#edff00", fontFamily: "'Montserrat',sans-serif" }}>LIVE</span>
       </div>
 
       {/* Scrollende items */}
       <div className="flex-1 overflow-hidden relative">
         <div
-          className="flex items-center gap-0 whitespace-nowrap"
-          style={{ animation: `ticker-scroll ${Math.max(doubled.length * 6, 20)}s linear infinite` }}
+          className="flex items-center whitespace-nowrap"
+          style={{ animation: `ticker-scroll ${speed}s linear infinite` }}
         >
-          {doubled.map((event, i) => (
-            <span key={`${event.id}-${i}`} className="inline-flex items-center gap-2 px-6 text-sm">
-              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0",
-                event.status === "verkocht" ? "bg-emerald-400" : event.status === "gereserveerd" ? "bg-amber-400" : "bg-gray-600"
-              )} />
-              <span className={cn("font-semibold",
-                event.status === "verkocht" ? "text-emerald-300" : event.status === "gereserveerd" ? "text-amber-300" : "text-gray-500"
-              )}>
-                {event.text}
-              </span>
-              {event.status !== "beschikbaar" && (
-                <span className="text-gray-600 text-xs ml-1">
-                  {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
+          {doubled.map((event, i) => {
+            const isSold = event.status === "verkocht";
+            const isReserved = event.status === "gereserveerd";
+            return (
+              <span key={`${event.id}-${i}`} className="inline-flex items-center gap-2.5 px-8">
+                {isSold && (
+                  <span className="text-lg" role="img" aria-label="verkocht">💰</span>
+                )}
+                {isReserved && (
+                  <span className="text-lg" role="img" aria-label="gereserveerd">⚡</span>
+                )}
+                {!isSold && !isReserved && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                )}
+                <span
+                  className="text-sm font-black tracking-wide uppercase"
+                  style={{
+                    color: isSold ? "#00ff88" : isReserved ? "#edff00" : "#4b5563",
+                    textShadow: isSold ? "0 0 12px rgba(0,255,136,0.6)" : isReserved ? "0 0 12px rgba(237,255,0,0.6)" : "none",
+                    fontFamily: "'Montserrat',sans-serif",
+                  }}
+                >
+                  {event.text}
                 </span>
-              )}
-              <span className="text-gray-700 ml-4">·</span>
-            </span>
-          ))}
+                {(isSold || isReserved) && (
+                  <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
+                  </span>
+                )}
+                <span style={{ color: "rgba(237,255,0,0.2)", marginLeft: 16, fontSize: 18 }}>◆</span>
+              </span>
+            );
+          })}
         </div>
       </div>
 
@@ -374,22 +392,29 @@ export default function VerkoopvoortgangClient({
     );
   };
 
-  const unitGrid = (cols = 4) => (
+  const unitGrid = (cols: 3 | 4 = 4) => (
     <div>
       <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
         <MapPin size={14} className="text-yellow-400" />
         {config.unitPlural} overzicht
       </h3>
-      <div className={cn("grid gap-1.5", `grid-cols-${cols}`)}>
+      <div className={cn("grid gap-1.5", cols === 3 ? "grid-cols-3" : "grid-cols-4")}>
         {sortedUnits.map((unit) => (
-          <div key={unit.id} className={cn("rounded-lg p-1.5 text-center border text-xs font-semibold",
-            unit.status === "verkocht"     && "bg-emerald-900/30 border-emerald-600/40 text-emerald-300",
-            unit.status === "gereserveerd" && "bg-amber-900/30 border-amber-600/40 text-amber-300",
-            unit.status === "beschikbaar"  && "bg-blue-900/30 border-blue-700/40 text-gray-300",
-            unit.status === "coming_soon"  && "bg-gray-900/30 border-gray-700/40 text-gray-500"
-          )}>
+          <div
+            key={unit.id}
+            className="rounded-lg p-1.5 text-center border text-xs font-bold transition-all duration-500"
+            style={
+              unit.status === "verkocht"
+                ? { background: "rgba(0,255,136,0.12)", border: "1.5px solid rgba(0,255,136,0.5)", color: "#00ff88", boxShadow: "0 0 8px rgba(0,255,136,0.2)" }
+                : unit.status === "gereserveerd"
+                ? { background: "rgba(237,255,0,0.1)", border: "1.5px solid rgba(237,255,0,0.5)", color: "#edff00", boxShadow: "0 0 8px rgba(237,255,0,0.15)" }
+                : unit.status === "coming_soon"
+                ? { background: "rgba(30,41,59,0.4)", border: "1px solid rgba(71,85,105,0.3)", color: "#475569" }
+                : { background: "rgba(30,58,138,0.25)", border: "1px solid rgba(59,130,246,0.2)", color: "#93c5fd" }
+            }
+          >
             {formatUnitCode(unit.code, config)}
-            <div className="text-[9px] font-normal opacity-70">
+            <div className="text-[9px] font-normal mt-0.5 opacity-80">
               {unit.status === "verkocht" ? "✓" : unit.status === "gereserveerd" ? "◷" : unit.status === "coming_soon" ? "…" : "○"}
             </div>
           </div>
