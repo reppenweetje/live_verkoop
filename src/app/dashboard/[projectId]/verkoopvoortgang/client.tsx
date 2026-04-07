@@ -454,20 +454,54 @@ export default function VerkoopvoortgangClient({
           {/* KPI's 2x2 */}
           {kpiCards(true)}
 
-          {/* Omzet + nu online compact */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Euro size={11} className="text-emerald-400" />Omzet</p>
+          {/* Omzet compact */}
+          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1"><Euro size={11} className="text-emerald-400" />Omzet behaald</p>
               <p className="text-xl font-black text-emerald-300" style={{ fontFamily: "'Montserrat',sans-serif" }}>{formatCurrency(stats.verkochtTotal)}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{stats.verkocht} verkocht</p>
             </div>
-            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><UserCheck size={11} className="text-emerald-400" />Nu online</p>
-              <p className="text-xl font-black text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>
-                {activeLeads.length} <span className="text-sm font-normal text-gray-400">lead{activeLeads.length !== 1 ? "s" : ""}</span>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">{stats.verkocht} verkocht</p>
+              <p className="text-xs text-amber-400">{stats.gereserveerd} gereserveerd</p>
+            </div>
+          </div>
+
+          {/* Nu online — namen met groene stip */}
+          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <UserCheck size={11} className="text-emerald-400" />
+                Nu online
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">actief · laatste 5 min</p>
+              <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: activeLeads.length > 0 ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.05)", color: activeLeads.length > 0 ? "#4ade80" : "#6b7280" }}>
+                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", activeLeads.length > 0 ? "bg-emerald-400 animate-pulse" : "bg-gray-600")} />
+                {activeLeads.length} actief
+              </span>
             </div>
+            {activeLeads.length === 0 ? (
+              <p className="text-xs text-gray-600 py-2 text-center">Geen leads actief in afgelopen 5 min</p>
+            ) : (
+              <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                {activeLeads.map((lead) => (
+                  <div key={lead.id} className="flex items-center gap-2.5">
+                    <span className="relative flex-shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-blue-700/60 flex items-center justify-center text-xs font-bold text-white">
+                        {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
+                      </span>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 animate-pulse"
+                        style={{ borderColor: "rgba(15,15,80,0.9)" }} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-white truncate">{lead.firstName} {lead.lastName}</p>
+                    </div>
+                    <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">
+                      {formatDistanceToNow(new Date(lead.lastActiveAt), { addSuffix: false, locale: nl })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Progress circle + unit grid naast elkaar */}
