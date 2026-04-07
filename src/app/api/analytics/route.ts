@@ -49,8 +49,9 @@ export async function GET(request: Request) {
       });
     }
 
-    const [siteStats, salesStats, timeseries, topPages, salesTopPages, devices, sources, browsers] =
+    const [realtimeSite, siteStats, salesStats, timeseries, topPages, salesTopPages, devices, sources, browsers] =
       await Promise.all([
+        getRealtimeVisitors("kopen.repp.nl"),
         siteDomain ? getSiteStats(siteDomain, q)     : Promise.resolve(null),
         getSalesToolStats(projectSlug, q),
         siteDomain ? getTimeseries(siteDomain, q)    : Promise.resolve([]),
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       periodDef: safePeriodDef,
-      realtimeSite: null,
+      realtimeSite,
       realtimeSales: null,
       siteStats,
       salesStats,

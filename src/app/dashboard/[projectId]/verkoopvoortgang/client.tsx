@@ -77,7 +77,6 @@ interface Props {
   directusProjectId: number;
   projectName: string;
   projectId: string;
-  plausibleSiteId?: string;
   initialSiteVisitors: number;
   initialSalesVisitors: number;
   saleStartsAt?: string;
@@ -85,7 +84,7 @@ interface Props {
 
 export default function VerkoopvoortgangClient({
   initialUnits, initialStats, directusProjectId, projectName,
-  projectId, plausibleSiteId, initialSiteVisitors, initialSalesVisitors, saleStartsAt
+  projectId, initialSiteVisitors, initialSalesVisitors, saleStartsAt
 }: Props) {
   const config = getProjectConfig(projectId);
   const [units, setUnits] = useState(initialUnits);
@@ -152,12 +151,11 @@ export default function VerkoopvoortgangClient({
 
   const pollVisitors = useCallback(async () => {
     try {
-      // period=today: project-specifieke bezoekers vandaag op kopen.repp.nl/{projectId}
       const res = await fetch(`/api/analytics?slug=${encodeURIComponent(projectId)}&period=today`, { cache: "no-store" });
       if (res.ok) {
         const d = await res.json();
+        // realtimeSite = current visitors op kopen.repp.nl (gehele verkooptool)
         setSiteVisitors(d.realtimeSite ?? 0);
-        // salesStats.visitors = bezoekers vandaag op kopen.repp.nl/{projectSlug}
         setSalesVisitors(d.salesStats?.visitors ?? 0);
       }
     } catch {}
@@ -252,16 +250,14 @@ export default function VerkoopvoortgangClient({
               <p className="text-xs text-amber-400">{formatCurrency(stats.gereserveerdTotal)}</p>
             </div>
           </div>
-          {plausibleSiteId && (
-            <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-4 flex items-center gap-3">
-              <Radio size={22} className="text-yellow-400 animate-pulse flex-shrink-0" />
-              <div>
-                <p className="text-xs text-gray-400">Live bezoekers site</p>
-                <p className="text-2xl font-bold text-white">{siteVisitors}</p>
-                <p className="text-xs text-gray-500">{plausibleSiteId}</p>
-              </div>
+          <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-4 flex items-center gap-3">
+            <Radio size={22} className="text-yellow-400 animate-pulse flex-shrink-0" />
+            <div>
+              <p className="text-xs text-gray-400">Live bezoekers nu</p>
+              <p className="text-2xl font-bold text-white">{siteVisitors}</p>
+              <p className="text-xs text-gray-500">kopen.repp.nl · realtime</p>
             </div>
-          )}
+          </div>
           <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-4 flex items-center gap-3">
             <Users size={22} className="text-yellow-400 flex-shrink-0" />
             <div>

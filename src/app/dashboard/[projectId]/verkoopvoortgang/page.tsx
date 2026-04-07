@@ -1,5 +1,5 @@
 import { getProjectBySlug, getUnitsForProject, calcUnitStats } from "@/lib/directus";
-import { getRealtimeVisitors, getSalesToolStats, SLUG_TO_SITE } from "@/lib/plausible";
+import { getRealtimeVisitors, getSalesToolStats } from "@/lib/plausible";
 import { notFound } from "next/navigation";
 import VerkoopvoortgangClient from "./client";
 
@@ -19,12 +19,10 @@ export default async function VerkoopvoortgangPage({ params }: { params: Promise
   const directusProjectId = Number(project.id);
   const units = await getUnitsForProject(directusProjectId);
   const stats = calcUnitStats(units);
-  const siteDomain = SLUG_TO_SITE[projectId] ?? null;
-
-  // siteVisitors = realtime bezoekers project-website (bijv. elster11.nl)
+  // siteVisitors = realtime bezoekers op kopen.repp.nl (live teller voor het verkoopmoment)
   // salesVisitors = bezoekers vandaag op kopen.repp.nl/{projectId} (project-specifiek)
   const [siteVisitors, salesStats] = await Promise.all([
-    siteDomain ? getRealtimeVisitors(siteDomain) : Promise.resolve(0),
+    getRealtimeVisitors("kopen.repp.nl"),
     getSalesToolStats(projectId, { period: "day" }),
   ]);
 
@@ -37,7 +35,6 @@ export default async function VerkoopvoortgangPage({ params }: { params: Promise
       directusProjectId={directusProjectId}
       projectName={project.name}
       projectId={projectId}
-      plausibleSiteId={siteDomain ?? undefined}
       initialSiteVisitors={siteVisitors}
       initialSalesVisitors={salesStats.visitors}
       saleStartsAt={saleStartsAt}
