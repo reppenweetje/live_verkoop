@@ -175,12 +175,15 @@ export default function VerkoopvoortgangClient({
   const timelineData = useMemo(() => {
     const grouped: Record<string, { sold: number; reserved: number }> = {};
     units.forEach((unit) => {
-      const dateStr = unit.boughtAt || unit.reservedAt;
-      if (!dateStr) return;
-      const date = dateStr.split("T")[0];
-      if (!grouped[date]) grouped[date] = { sold: 0, reserved: 0 };
-      if (unit.status === "verkocht") grouped[date].sold += 1;
-      else if (unit.status === "gereserveerd") grouped[date].reserved += 1;
+      if (unit.status === "verkocht" && unit.boughtAt) {
+        const date = unit.boughtAt.split("T")[0];
+        if (!grouped[date]) grouped[date] = { sold: 0, reserved: 0 };
+        grouped[date].sold += 1;
+      } else if (unit.status === "gereserveerd" && unit.reservedAt) {
+        const date = unit.reservedAt.split("T")[0];
+        if (!grouped[date]) grouped[date] = { sold: 0, reserved: 0 };
+        grouped[date].reserved += 1;
+      }
     });
     return Object.entries(grouped)
       .sort(([a], [b]) => a.localeCompare(b))
