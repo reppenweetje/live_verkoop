@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Clock, Activity, RefreshCw, Radio, VolumeX, Volume2, Users, CheckCircle2, Timer, MapPin, Columns2, Monitor, Euro, Zap } from "lucide-react";
+import { Clock, Activity, RefreshCw, Radio, VolumeX, Volume2, Users, CheckCircle2, Timer, MapPin, Columns2, Monitor, Euro, UserCheck } from "lucide-react";
 import { format, parseISO, formatDistanceToNow, differenceInSeconds } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useSaleAudio } from "@/hooks/useSaleAudio";
 import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
-import { TrendingUp as TrendUp, TrendingDown } from "lucide-react";
+import type { ActiveLead } from "@/app/api/active-leads/route";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -167,6 +167,7 @@ export default function VerkoopvoortgangClient({
   const [portraitMode, setPortraitMode] = useState(false);
   const prevUnitsRef = useRef(initialUnits);
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
+  const [activeLeads, setActiveLeads] = useState<ActiveLead[]>([]);
 
   // Portrait mode persisteren in localStorage
   useEffect(() => {
@@ -238,18 +239,33 @@ export default function VerkoopvoortgangClient({
       const res = await fetch(`/api/analytics?slug=${encodeURIComponent(projectId)}&period=today`, { cache: "no-store" });
       if (res.ok) {
         const d = await res.json();
-        // realtimeSite = current visitors op kopen.repp.nl (gehele verkooptool)
         setSiteVisitors(d.realtimeSite ?? 0);
         setSalesVisitors(d.salesStats?.visitors ?? 0);
       }
     } catch {}
   }, [projectId]);
 
+  const pollActiveLeads = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/active-leads?projectSlug=${encodeURIComponent(projectId)}`, { cache: "no-store" });
+      if (res.ok) {
+        const d = await res.json();
+        setActiveLeads(d.activeLeads ?? []);
+      }
+    } catch {}
+  }, [projectId]);
+
   useEffect(() => {
+    pollActiveLeads(); // direct ophalen bij mount
     const unitsInterval    = setInterval(pollUnits, 2000);
     const visitorsInterval = setInterval(pollVisitors, 15000);
-    return () => { clearInterval(unitsInterval); clearInterval(visitorsInterval); };
-  }, [pollUnits, pollVisitors]);
+    const leadsInterval    = setInterval(pollActiveLeads, 30000);
+    return () => {
+      clearInterval(unitsInterval);
+      clearInterval(visitorsInterval);
+      clearInterval(leadsInterval);
+    };
+  }, [pollUnits, pollVisitors, pollActiveLeads]);
 
   const progressPercentage = stats.totalProjectValue > 0 ? Math.min(stats.verkochtTotal / stats.totalProjectValue * 100, 100) : 0;
   const potentialPercentage = stats.totalProjectValue > 0 ? Math.min((stats.verkochtTotal + stats.gereserveerdTotal) / stats.totalProjectValue * 100, 100) : 0;
@@ -276,22 +292,6 @@ export default function VerkoopvoortgangClient({
         ...data,
       }));
   }, [units]);
-
-  // Velocity: verkopen + reserveringen in laatste 10 vs. 10-20 min geleden
-  const velocity = useMemo(() => {
-    const now = Date.now();
-    const ten = 10 * 60 * 1000;
-    const recent = recentActivity.filter((e) =>
-      (e.status === "verkocht" || e.status === "gereserveerd") &&
-      now - e.time.getTime() < ten
-    ).length;
-    const prev = recentActivity.filter((e) =>
-      (e.status === "verkocht" || e.status === "gereserveerd") &&
-      now - e.time.getTime() >= ten &&
-      now - e.time.getTime() < ten * 2
-    ).length;
-    return { recent, prev, trend: recent > prev ? "up" : recent < prev ? "down" : "flat" };
-  }, [recentActivity]);
 
   const sortedUnits = useMemo(() => [...units].sort((a, b) => {
     const order: Record<string, number> = { verkocht: 0, gereserveerd: 1, beschikbaar: 2, coming_soon: 3 };
@@ -454,7 +454,7 @@ export default function VerkoopvoortgangClient({
           {/* KPI's 2x2 */}
           {kpiCards(true)}
 
-          {/* Omzet + velocity compact */}
+          {/* Omzet + nu online compact */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
               <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Euro size={11} className="text-emerald-400" />Omzet</p>
@@ -462,11 +462,11 @@ export default function VerkoopvoortgangClient({
               <p className="text-xs text-gray-500 mt-0.5">{stats.verkocht} verkocht</p>
             </div>
             <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Zap size={11} className="text-yellow-400" />Laatste 10 min</p>
-              <p className="text-xl font-black text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>{velocity.recent} <span className="text-sm font-normal text-gray-400">acties</span></p>
-              <p className={cn("text-xs mt-0.5", velocity.trend === "up" ? "text-emerald-400" : velocity.trend === "down" ? "text-gray-500" : "text-gray-600")}>
-                {velocity.trend === "up" ? "↑ sneller" : velocity.trend === "down" ? "↓ rustiger" : "→ zelfde tempo"}
+              <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><UserCheck size={11} className="text-emerald-400" />Nu online</p>
+              <p className="text-xl font-black text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>
+                {activeLeads.length} <span className="text-sm font-normal text-gray-400">lead{activeLeads.length !== 1 ? "s" : ""}</span>
               </p>
+              <p className="text-xs text-gray-500 mt-0.5">favorietactiviteit · 30 min</p>
             </div>
           </div>
 
@@ -562,56 +562,50 @@ export default function VerkoopvoortgangClient({
               </div>
             </div>
 
-            {/* Velocity — laatste 10 min */}
-            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col justify-center">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap size={15} className="text-yellow-400" />
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Laatste 10 minuten</p>
-              </div>
-
-              <div className="flex items-end gap-3 mb-2">
-                <p
-                  className="font-black text-white leading-none"
-                  style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontFamily: "'Montserrat',sans-serif" }}
-                >
-                  {velocity.recent}
-                </p>
-                <div className="mb-2">
-                  <p className="text-sm text-gray-300 font-medium leading-tight">actie{velocity.recent !== 1 ? "s" : ""}</p>
-                  <p className="text-xs text-gray-500">verkoop + reservering</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mt-1">
-                {velocity.trend === "up" && (
-                  <span className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
-                    <TrendUp size={13} /> Sneller dan vorig kwartier
-                  </span>
-                )}
-                {velocity.trend === "down" && (
-                  <span className="flex items-center gap-1 text-xs font-semibold text-gray-500">
-                    <TrendingDown size={13} /> Rustiger dan vorig kwartier
-                  </span>
-                )}
-                {velocity.trend === "flat" && (
-                  <span className="text-xs text-gray-600">Zelfde tempo als vorig kwartier</span>
-                )}
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-blue-800/40">
-                <p className="text-xs text-gray-500 mb-2">Vorig kwartier</p>
+            {/* Nu online — actieve leads */}
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-blue-950/60 rounded-full overflow-hidden">
-                    {velocity.prev > 0 && (
-                      <div
-                        className="h-full rounded-full bg-blue-500/50 transition-all duration-500"
-                        style={{ width: `${Math.min((velocity.prev / Math.max(velocity.recent, velocity.prev, 1)) * 100, 100)}%` }}
-                      />
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-500 w-4 text-right">{velocity.prev}</span>
+                  <UserCheck size={15} className="text-emerald-400" />
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Nu online</p>
                 </div>
+                <span className="flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: activeLeads.length > 0 ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.05)", color: activeLeads.length > 0 ? "#4ade80" : "#6b7280" }}>
+                  <span className={cn("w-1.5 h-1.5 rounded-full", activeLeads.length > 0 ? "bg-emerald-400 animate-pulse" : "bg-gray-600")} />
+                  {activeLeads.length} actief
+                </span>
               </div>
+
+              {activeLeads.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs text-gray-600 text-center">Geen leads actief in afgelopen 30 min</p>
+                </div>
+              ) : (
+                <div className="flex-1 space-y-2 overflow-y-auto max-h-44">
+                  {activeLeads.map((lead) => (
+                    <div key={lead.id} className="flex items-center justify-between py-1.5 border-b border-blue-800/30 last:border-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-6 h-6 rounded-full bg-blue-700/50 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                          {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white truncate">{lead.firstName} {lead.lastName}</p>
+                          {lead.favouriteCount > 0 && (
+                            <p className="text-xs text-gray-500">❤ {lead.favouriteCount} favoriet{lead.favouriteCount !== 1 ? "en" : ""}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 whitespace-nowrap ml-2 flex-shrink-0">
+                        {formatDistanceToNow(new Date(lead.lastActiveAt), { addSuffix: true, locale: nl })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-gray-600 mt-3 pt-2 border-t border-blue-800/30">
+                Op basis van favorietactiviteit · laatste 30 min
+              </p>
             </div>
           </div>
 
