@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { TrendingUp, Clock, Activity, RefreshCw, Radio, VolumeX, Volume2, Users, CheckCircle2, Timer, MapPin, Columns2, Monitor } from "lucide-react";
+import { Clock, Activity, RefreshCw, Radio, VolumeX, Volume2, Users, CheckCircle2, Timer, MapPin, Columns2, Monitor, Euro, Zap } from "lucide-react";
 import { format, parseISO, formatDistanceToNow, differenceInSeconds } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useSaleAudio } from "@/hooks/useSaleAudio";
 import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
+import { TrendingUp as TrendUp, TrendingDown } from "lucide-react";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -279,6 +277,22 @@ export default function VerkoopvoortgangClient({
       }));
   }, [units]);
 
+  // Velocity: verkopen + reserveringen in laatste 10 vs. 10-20 min geleden
+  const velocity = useMemo(() => {
+    const now = Date.now();
+    const ten = 10 * 60 * 1000;
+    const recent = recentActivity.filter((e) =>
+      (e.status === "verkocht" || e.status === "gereserveerd") &&
+      now - e.time.getTime() < ten
+    ).length;
+    const prev = recentActivity.filter((e) =>
+      (e.status === "verkocht" || e.status === "gereserveerd") &&
+      now - e.time.getTime() >= ten &&
+      now - e.time.getTime() < ten * 2
+    ).length;
+    return { recent, prev, trend: recent > prev ? "up" : recent < prev ? "down" : "flat" };
+  }, [recentActivity]);
+
   const sortedUnits = useMemo(() => [...units].sort((a, b) => {
     const order: Record<string, number> = { verkocht: 0, gereserveerd: 1, beschikbaar: 2, coming_soon: 3 };
     return (order[a.status] ?? 4) - (order[b.status] ?? 4) || a.code.localeCompare(b.code, undefined, { numeric: true });
@@ -440,6 +454,22 @@ export default function VerkoopvoortgangClient({
           {/* KPI's 2x2 */}
           {kpiCards(true)}
 
+          {/* Omzet + velocity compact */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Euro size={11} className="text-emerald-400" />Omzet</p>
+              <p className="text-xl font-black text-emerald-300" style={{ fontFamily: "'Montserrat',sans-serif" }}>{formatCurrency(stats.verkochtTotal)}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{stats.verkocht} verkocht</p>
+            </div>
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Zap size={11} className="text-yellow-400" />Laatste 10 min</p>
+              <p className="text-xl font-black text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>{velocity.recent} <span className="text-sm font-normal text-gray-400">acties</span></p>
+              <p className={cn("text-xs mt-0.5", velocity.trend === "up" ? "text-emerald-400" : velocity.trend === "down" ? "text-gray-500" : "text-gray-600")}>
+                {velocity.trend === "up" ? "↑ sneller" : velocity.trend === "down" ? "↓ rustiger" : "→ zelfde tempo"}
+              </p>
+            </div>
+          </div>
+
           {/* Progress circle + unit grid naast elkaar */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4">
@@ -501,30 +531,87 @@ export default function VerkoopvoortgangClient({
           {/* Top KPIs */}
           {kpiCards(false)}
 
-          {/* Progress + chart */}
+          {/* Progress + omzet + velocity */}
           <div className="grid gap-6 lg:grid-cols-3 mb-6">
+            {/* Voortgang cirkel */}
             <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col items-center justify-center">
               {progressCircle(120, 10)}
             </div>
-            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 lg:col-span-2">
-              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                <TrendingUp size={16} className="text-yellow-400" />
-                Verkopen en Reserveringen per Dag
-              </h3>
-              {timelineData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={timelineData} barGap={4}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 11 }} tickLine={false} />
-                    <YAxis stroke="#6b7280" tick={{ fontSize: 11 }} tickLine={false} width={24} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} labelStyle={{ color: "#e2e8f0" }} />
-                    <Bar dataKey="sold" name="Verkocht" fill="#34d399" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="reserved" name="Gereserveerd" fill="#fbbf24" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-52 text-gray-500 text-sm">Nog geen verkoop- of reserveringsdata</div>
-              )}
+
+            {/* Omzetmeter */}
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-3">
+                <Euro size={15} className="text-emerald-400" />
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Omzet behaald</p>
+              </div>
+              <p
+                className="font-black text-emerald-300 leading-none mb-1 transition-all duration-700"
+                style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)", fontFamily: "'Montserrat',sans-serif", textShadow: "0 0 30px rgba(74,222,128,0.3)" }}
+              >
+                {formatCurrency(stats.verkochtTotal)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">{stats.verkocht} unit{stats.verkocht !== 1 ? "s" : ""} verkocht</p>
+
+              <div className="mt-4 pt-4 border-t border-blue-800/40">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock size={12} className="text-amber-400" />
+                  <p className="text-xs text-gray-400">Incl. reserveringen</p>
+                </div>
+                <p className="text-lg font-bold text-amber-300">{formatCurrency(stats.verkochtTotal + stats.gereserveerdTotal)}</p>
+                <p className="text-xs text-gray-500">{stats.verkocht + stats.gereserveerd} van {stats.total} {stats.total === 1 ? "unit" : "units"}</p>
+              </div>
+            </div>
+
+            {/* Velocity — laatste 10 min */}
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={15} className="text-yellow-400" />
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Laatste 10 minuten</p>
+              </div>
+
+              <div className="flex items-end gap-3 mb-2">
+                <p
+                  className="font-black text-white leading-none"
+                  style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontFamily: "'Montserrat',sans-serif" }}
+                >
+                  {velocity.recent}
+                </p>
+                <div className="mb-2">
+                  <p className="text-sm text-gray-300 font-medium leading-tight">actie{velocity.recent !== 1 ? "s" : ""}</p>
+                  <p className="text-xs text-gray-500">verkoop + reservering</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-1">
+                {velocity.trend === "up" && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                    <TrendUp size={13} /> Sneller dan vorig kwartier
+                  </span>
+                )}
+                {velocity.trend === "down" && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-gray-500">
+                    <TrendingDown size={13} /> Rustiger dan vorig kwartier
+                  </span>
+                )}
+                {velocity.trend === "flat" && (
+                  <span className="text-xs text-gray-600">Zelfde tempo als vorig kwartier</span>
+                )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-blue-800/40">
+                <p className="text-xs text-gray-500 mb-2">Vorig kwartier</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-blue-950/60 rounded-full overflow-hidden">
+                    {velocity.prev > 0 && (
+                      <div
+                        className="h-full rounded-full bg-blue-500/50 transition-all duration-500"
+                        style={{ width: `${Math.min((velocity.prev / Math.max(velocity.recent, velocity.prev, 1)) * 100, 100)}%` }}
+                      />
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500 w-4 text-right">{velocity.prev}</span>
+                </div>
+              </div>
             </div>
           </div>
 
