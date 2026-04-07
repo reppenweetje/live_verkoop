@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { TrendingUp, Clock, Activity, RefreshCw, Radio, VolumeX, Volume2, Users, Euro, CheckCircle2, Timer, MapPin } from "lucide-react";
+import { TrendingUp, Clock, Activity, RefreshCw, Radio, VolumeX, Volume2, Users, CheckCircle2, Timer, MapPin, Columns2, Monitor } from "lucide-react";
 import { format, parseISO, formatDistanceToNow, differenceInSeconds } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -71,6 +71,66 @@ function useLiveTimer(startAt?: string) {
   return `${h > 0 ? `${h}u ` : ""}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function ActivityTicker({ events }: { events: ActivityEvent[] }) {
+  const items = events.length > 0
+    ? events
+    : [{ id: "placeholder", text: "Wacht op activiteit tijdens het verkoopmoment...", status: "beschikbaar" as UnitStatus, time: new Date() }];
+
+  // Dupliceer voor naadloze loop
+  const doubled = [...items, ...items];
+
+  return (
+    <div
+      className="w-full overflow-hidden flex items-center gap-0"
+      style={{
+        background: "rgba(15,15,112,0.9)",
+        borderBottom: "1px solid rgba(237,255,0,0.15)",
+        height: 38,
+      }}
+    >
+      {/* LIVE badge */}
+      <div className="flex-shrink-0 flex items-center gap-1.5 px-3 h-full" style={{ borderRight: "1px solid rgba(237,255,0,0.15)", background: "rgba(237,255,0,0.08)" }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#edff00", fontFamily: "'Montserrat',sans-serif" }}>Live</span>
+      </div>
+
+      {/* Scrollende items */}
+      <div className="flex-1 overflow-hidden relative">
+        <div
+          className="flex items-center gap-0 whitespace-nowrap"
+          style={{ animation: `ticker-scroll ${Math.max(doubled.length * 6, 20)}s linear infinite` }}
+        >
+          {doubled.map((event, i) => (
+            <span key={`${event.id}-${i}`} className="inline-flex items-center gap-2 px-6 text-sm">
+              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0",
+                event.status === "verkocht" ? "bg-emerald-400" : event.status === "gereserveerd" ? "bg-amber-400" : "bg-gray-600"
+              )} />
+              <span className={cn("font-semibold",
+                event.status === "verkocht" ? "text-emerald-300" : event.status === "gereserveerd" ? "text-amber-300" : "text-gray-500"
+              )}>
+                {event.text}
+              </span>
+              {event.status !== "beschikbaar" && (
+                <span className="text-gray-600 text-xs ml-1">
+                  {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
+                </span>
+              )}
+              <span className="text-gray-700 ml-4">·</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes ticker-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 interface Props {
   initialUnits: DashboardUnit[];
   initialStats: UnitStats;
@@ -94,8 +154,22 @@ export default function VerkoopvoortgangClient({
   const [siteVisitors, setSiteVisitors] = useState(initialSiteVisitors);
   const [salesVisitors, setSalesVisitors] = useState(initialSalesVisitors);
   const [muted, setMuted] = useState(false);
+  const [portraitMode, setPortraitMode] = useState(false);
   const prevUnitsRef = useRef(initialUnits);
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
+
+  // Portrait mode persisteren in localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("vv_portrait");
+    if (stored === "1") setPortraitMode(true);
+  }, []);
+
+  const togglePortrait = useCallback(() => {
+    setPortraitMode((p) => {
+      localStorage.setItem("vv_portrait", p ? "0" : "1");
+      return !p;
+    });
+  }, []);
 
   useSaleAudio(units, muted);
 
@@ -198,184 +272,273 @@ export default function VerkoopvoortgangClient({
     return (order[a.status] ?? 4) - (order[b.status] ?? 4) || a.code.localeCompare(b.code, undefined, { numeric: true });
   }), [units]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 px-6 py-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <LiveDot color="emerald" />
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Verkoopmoment</span>
-            </div>
-            <h1 className="text-3xl font-bold text-white">Verkoopvoortgang</h1>
-            <p className="text-gray-400 mt-1">{projectName}</p>
+  // ─── Gedeelde blokken ─────────────────────────────────────────────────────
+
+  const headerControls = (
+    <div className="flex items-center gap-2 flex-wrap">
+      {timer && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/10">
+          <Timer size={13} className="text-yellow-400" />
+          <span className="text-sm font-mono font-bold text-yellow-300">{timer}</span>
+          <span className="text-xs text-gray-400">live</span>
+        </div>
+      )}
+      <div className="flex items-center gap-2 text-xs text-gray-400">
+        <RefreshCw size={12} className={cn("text-yellow-400", isRefreshing && "animate-spin")} />
+        <span>{format(lastUpdated, "HH:mm:ss", { locale: nl })}</span>
+      </div>
+      <button onClick={() => setMuted((m) => !m)} title={muted ? "Geluid aan" : "Geluid uit"}
+        className={cn("w-8 h-8 rounded-full flex items-center justify-center border transition-colors",
+          muted ? "border-gray-700 text-gray-600" : "border-yellow-400/30 text-yellow-400"
+        )}>
+        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+      </button>
+      <button onClick={togglePortrait} title={portraitMode ? "Volledig scherm" : "Portrait mode"}
+        className={cn("w-8 h-8 rounded-full flex items-center justify-center border transition-colors",
+          portraitMode ? "border-yellow-400 text-yellow-400 bg-yellow-400/10" : "border-gray-700 text-gray-500 hover:text-gray-300"
+        )}>
+        {portraitMode ? <Monitor size={14} /> : <Columns2 size={14} />}
+      </button>
+    </div>
+  );
+
+  const kpiCards = (compact = false) => (
+    <div className={cn("grid gap-3 mb-4", compact ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4 mb-6")}>
+      <div className="bg-blue-900/40 border border-emerald-700/30 rounded-xl p-3 flex items-center gap-3">
+        <CheckCircle2 size={compact ? 18 : 22} className="text-emerald-400 flex-shrink-0" />
+        <div>
+          <p className="text-xs text-gray-400">Verkocht</p>
+          <p className={cn("font-bold text-white", compact ? "text-xl" : "text-2xl")}>{stats.verkocht}</p>
+          <p className="text-xs text-emerald-400">{formatCurrency(stats.verkochtTotal)}</p>
+        </div>
+      </div>
+      <div className="bg-blue-900/40 border border-amber-700/30 rounded-xl p-3 flex items-center gap-3">
+        <Clock size={compact ? 18 : 22} className="text-amber-400 flex-shrink-0" />
+        <div>
+          <p className="text-xs text-gray-400">Gereserveerd</p>
+          <p className={cn("font-bold text-white", compact ? "text-xl" : "text-2xl")}>{stats.gereserveerd}</p>
+          <p className="text-xs text-amber-400">{formatCurrency(stats.gereserveerdTotal)}</p>
+        </div>
+      </div>
+      <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-3 flex items-center gap-3">
+        <Radio size={compact ? 18 : 22} className="text-yellow-400 animate-pulse flex-shrink-0" />
+        <div>
+          <p className="text-xs text-gray-400">Live bezoekers</p>
+          <p className={cn("font-bold text-white", compact ? "text-xl" : "text-2xl")}>{siteVisitors}</p>
+          <p className="text-xs text-gray-500">kopen.repp.nl</p>
+        </div>
+      </div>
+      <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-3 flex items-center gap-3">
+        <Users size={compact ? 18 : 22} className="text-yellow-400 flex-shrink-0" />
+        <div>
+          <p className="text-xs text-gray-400">Vandaag</p>
+          <p className={cn("font-bold text-white", compact ? "text-xl" : "text-2xl")}>{salesVisitors}</p>
+          <p className="text-xs text-gray-500">{projectId}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const progressCircle = (size: number = 120, strokeW: number = 10) => {
+    const r = (size / 2) - strokeW;
+    const circ = 2 * Math.PI * r;
+    return (
+      <div className="flex flex-col items-center">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Verkoopvoortgang</p>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+          <circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={strokeW} fill="none" />
+          <circle cx={size/2} cy={size/2} r={r} stroke="#fbbf24" strokeWidth={strokeW} fill="none"
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - potentialPercentage / 100)} strokeLinecap="round" opacity="0.35" />
+          <circle cx={size/2} cy={size/2} r={r} stroke="#34d399" strokeWidth={strokeW} fill="none"
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - progressPercentage / 100)} strokeLinecap="round" />
+        </svg>
+        <div className="text-center mt-3">
+          <p className="text-3xl font-bold text-white">{progressPercentage.toFixed(0)}%</p>
+          <p className="text-xs text-gray-400 mt-0.5">verkocht</p>
+        </div>
+        <div className="w-full mt-3 pt-3 border-t border-blue-800/40 space-y-1.5 text-xs">
+          <div className="flex justify-between text-gray-300">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" />Verkocht</span>
+            <span>{formatCurrency(stats.verkochtTotal)}</span>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            {timer && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/10">
-                <Timer size={13} className="text-yellow-400" />
-                <span className="text-sm font-mono font-bold text-yellow-300">{timer}</span>
-                <span className="text-xs text-gray-400">live</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <RefreshCw size={12} className={cn("text-yellow-400", isRefreshing && "animate-spin")} />
-              <span>Bijgewerkt {format(lastUpdated, "HH:mm:ss", { locale: nl })}</span>
-            </div>
-            <button
-              onClick={() => setMuted((m) => !m)}
-              title={muted ? "Geluid aan" : "Geluid uit"}
-              className={cn("w-8 h-8 rounded-full flex items-center justify-center border transition-colors",
-                muted ? "border-gray-700 text-gray-600 hover:text-gray-400" : "border-yellow-400/30 text-yellow-400 hover:border-yellow-400"
-              )}
-            >
-              {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-            </button>
+          <div className="flex justify-between text-gray-300">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" />Gereserveerd</span>
+            <span>{formatCurrency(stats.gereserveerdTotal)}</span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>Totaal</span>
+            <span>{formatCurrency(stats.totalProjectValue)}</span>
           </div>
         </div>
+      </div>
+    );
+  };
 
-        {/* Top KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-900/40 border border-emerald-700/30 rounded-xl p-4 flex items-center gap-3">
-            <CheckCircle2 size={22} className="text-emerald-400 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Verkocht</p>
-              <p className="text-2xl font-bold text-white">{stats.verkocht}</p>
-              <p className="text-xs text-emerald-400">{formatCurrency(stats.verkochtTotal)}</p>
+  const unitGrid = (cols = 4) => (
+    <div>
+      <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+        <MapPin size={14} className="text-yellow-400" />
+        {config.unitPlural} overzicht
+      </h3>
+      <div className={cn("grid gap-1.5", `grid-cols-${cols}`)}>
+        {sortedUnits.map((unit) => (
+          <div key={unit.id} className={cn("rounded-lg p-1.5 text-center border text-xs font-semibold",
+            unit.status === "verkocht"     && "bg-emerald-900/30 border-emerald-600/40 text-emerald-300",
+            unit.status === "gereserveerd" && "bg-amber-900/30 border-amber-600/40 text-amber-300",
+            unit.status === "beschikbaar"  && "bg-blue-900/30 border-blue-700/40 text-gray-300",
+            unit.status === "coming_soon"  && "bg-gray-900/30 border-gray-700/40 text-gray-500"
+          )}>
+            {formatUnitCode(unit.code, config)}
+            <div className="text-[9px] font-normal opacity-70">
+              {unit.status === "verkocht" ? "✓" : unit.status === "gereserveerd" ? "◷" : unit.status === "coming_soon" ? "…" : "○"}
             </div>
           </div>
-          <div className="bg-blue-900/40 border border-amber-700/30 rounded-xl p-4 flex items-center gap-3">
-            <Clock size={22} className="text-amber-400 flex-shrink-0" />
+        ))}
+      </div>
+    </div>
+  );
+
+  // ─── Portrait mode layout ──────────────────────────────────────────────────
+  if (portraitMode) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(180deg, #0f0f70 0%, #0d0d5e 100%)" }}>
+        {/* Ticker bovenaan */}
+        <ActivityTicker events={recentActivity} />
+
+        {/* Compacte header */}
+        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(237,255,0,0.08)" }}>
+          <div className="flex items-center gap-2">
+            <LiveDot color="emerald" />
             <div>
-              <p className="text-xs text-gray-400">Gereserveerd</p>
-              <p className="text-2xl font-bold text-white">{stats.gereserveerd}</p>
-              <p className="text-xs text-amber-400">{formatCurrency(stats.gereserveerdTotal)}</p>
+              <span className="text-sm font-bold text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>Verkoopvoortgang</span>
+              <span className="text-xs text-gray-500 ml-2">{projectName}</span>
             </div>
           </div>
-          <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-4 flex items-center gap-3">
-            <Radio size={22} className="text-yellow-400 animate-pulse flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Live bezoekers nu</p>
-              <p className="text-2xl font-bold text-white">{siteVisitors}</p>
-              <p className="text-xs text-gray-500">kopen.repp.nl · realtime</p>
-            </div>
-          </div>
-          <div className="bg-blue-900/40 border border-yellow-700/30 rounded-xl p-4 flex items-center gap-3">
-            <Users size={22} className="text-yellow-400 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-400">Bezoekers verkooptool</p>
-              <p className="text-2xl font-bold text-white">{salesVisitors}</p>
-              <p className="text-xs text-gray-500">kopen.repp.nl/{projectId} · vandaag</p>
-            </div>
-          </div>
+          {headerControls}
         </div>
 
-        {/* Progress + chart + activity */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-6">
-          {/* Sales progress circle */}
-          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col items-center justify-center">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Verkoopvoortgang</p>
-            <svg width="120" height="120" viewBox="0 0 120 120" className="rotate-[-90deg]">
-              <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,0.08)" strokeWidth="10" fill="none" />
-              <circle cx="60" cy="60" r="52" stroke="#fbbf24" strokeWidth="10" fill="none" strokeDasharray={circumference}
-                strokeDashoffset={circumference * (1 - potentialPercentage / 100)} strokeLinecap="round" opacity="0.35" />
-              <circle cx="60" cy="60" r="52" stroke="#34d399" strokeWidth="10" fill="none" strokeDasharray={circumference}
-                strokeDashoffset={circumference * (1 - progressPercentage / 100)} strokeLinecap="round" />
-            </svg>
-            <div className="text-center mt-4">
-              <p className="text-3xl font-bold text-white">{progressPercentage.toFixed(0)}%</p>
-              <p className="text-xs text-gray-400 mt-1">verkocht</p>
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          {/* KPI's 2x2 */}
+          {kpiCards(true)}
+
+          {/* Progress circle + unit grid naast elkaar */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4">
+              {progressCircle(100, 8)}
             </div>
-            <div className="w-full mt-4 pt-4 border-t border-blue-800/40 space-y-2 text-xs">
-              <div className="flex justify-between text-gray-300">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Verkocht</span>
-                <span>{formatCurrency(stats.verkochtTotal)}</span>
-              </div>
-              <div className="flex justify-between text-gray-300">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Gereserveerd</span>
-                <span>{formatCurrency(stats.gereserveerdTotal)}</span>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Projectwaarde</span>
-                <span>{formatCurrency(stats.totalProjectValue)}</span>
-              </div>
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4">
+              {unitGrid(3)}
             </div>
           </div>
 
-          {/* Bar chart */}
-          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 lg:col-span-2">
-            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-yellow-400" />
-              Verkopen en Reserveringen per Dag
+          {/* Activiteitenfeed compact */}
+          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4">
+            <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2">
+              <Activity size={13} className="text-yellow-400" />
+              Live activiteiten
             </h3>
-            {timelineData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={timelineData} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 11 }} tickLine={false} />
-                  <YAxis stroke="#6b7280" tick={{ fontSize: 11 }} tickLine={false} width={24} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} labelStyle={{ color: "#e2e8f0" }} />
-                  <Bar dataKey="sold" name="Verkocht" fill="#34d399" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="reserved" name="Gereserveerd" fill="#fbbf24" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-52 text-gray-500 text-sm">Nog geen verkoop- of reserveringsdata</div>
-            )}
-          </div>
-        </div>
-
-        {/* Unit grid + activity feed */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Unit status grid */}
-          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6">
-            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <MapPin size={16} className="text-yellow-400" />
-              {config.unitPlural} overzicht
-            </h3>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {sortedUnits.map((unit) => (
-                <div key={unit.id} className={cn("rounded-lg p-2 text-center border text-xs font-semibold",
-                  unit.status === "verkocht"     && "bg-emerald-900/30 border-emerald-600/40 text-emerald-300",
-                  unit.status === "gereserveerd" && "bg-amber-900/30 border-amber-600/40 text-amber-300",
-                  unit.status === "beschikbaar"  && "bg-blue-900/30 border-blue-700/40 text-gray-300",
-                  unit.status === "coming_soon"  && "bg-gray-900/30 border-gray-700/40 text-gray-500"
-                )}>
-                  {formatUnitCode(unit.code, config)}
-                  <div className="text-[10px] font-normal mt-0.5 opacity-70">
-                    {unit.status === "verkocht" ? "✓" : unit.status === "gereserveerd" ? "◷" : unit.status === "coming_soon" ? "…" : "○"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Activity feed */}
-          <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6">
-            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <Activity size={16} className="text-yellow-400" />
-              Live activiteitenfeed
-            </h3>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {recentActivity.length > 0 ? recentActivity.map((event, i) => (
+            <div className="space-y-1.5 max-h-52 overflow-y-auto">
+              {recentActivity.length > 0 ? recentActivity.slice(0, 8).map((event, i) => (
                 <div key={`${event.id}-${i}`} className={cn(
-                  "flex items-center justify-between p-3 rounded-lg border text-sm",
+                  "flex items-center justify-between px-3 py-2 rounded-lg border text-xs",
                   event.status === "verkocht" ? "bg-emerald-900/20 border-emerald-700/30" : "bg-amber-900/20 border-amber-700/30"
                 )}>
-                  <span className="font-medium text-white">{event.text}</span>
-                  <span className="text-xs text-gray-500 whitespace-nowrap ml-3">
+                  <span className="font-medium text-white truncate">{event.text}</span>
+                  <span className="text-gray-500 whitespace-nowrap ml-2 flex-shrink-0">
                     {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
                   </span>
                 </div>
               )) : (
-                <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
-                  <div className="text-center">
-                    <Activity size={24} className="mx-auto mb-2 opacity-30" />
-                    <p>Wacht op verkoop- of reserveringsactiviteit...</p>
-                  </div>
-                </div>
+                <p className="text-gray-500 text-xs text-center py-4">Wacht op activiteit...</p>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Normale (volledig scherm) layout ──────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950">
+      {/* Ticker */}
+      <ActivityTicker events={recentActivity} />
+
+      <div className="px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <LiveDot color="emerald" />
+                <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Verkoopmoment</span>
+              </div>
+              <h1 className="text-3xl font-bold text-white">Verkoopvoortgang</h1>
+              <p className="text-gray-400 mt-1">{projectName}</p>
+            </div>
+            {headerControls}
+          </div>
+
+          {/* Top KPIs */}
+          {kpiCards(false)}
+
+          {/* Progress + chart */}
+          <div className="grid gap-6 lg:grid-cols-3 mb-6">
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 flex flex-col items-center justify-center">
+              {progressCircle(120, 10)}
+            </div>
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6 lg:col-span-2">
+              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <TrendingUp size={16} className="text-yellow-400" />
+                Verkopen en Reserveringen per Dag
+              </h3>
+              {timelineData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={timelineData} barGap={4}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 11 }} tickLine={false} />
+                    <YAxis stroke="#6b7280" tick={{ fontSize: 11 }} tickLine={false} width={24} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} labelStyle={{ color: "#e2e8f0" }} />
+                    <Bar dataKey="sold" name="Verkocht" fill="#34d399" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="reserved" name="Gereserveerd" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-52 text-gray-500 text-sm">Nog geen verkoop- of reserveringsdata</div>
+              )}
+            </div>
+          </div>
+
+          {/* Unit grid + activity feed */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6">
+              {unitGrid(4)}
+            </div>
+            <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-6">
+              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <Activity size={16} className="text-yellow-400" />
+                Live activiteitenfeed
+              </h3>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {recentActivity.length > 0 ? recentActivity.map((event, i) => (
+                  <div key={`${event.id}-${i}`} className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border text-sm",
+                    event.status === "verkocht" ? "bg-emerald-900/20 border-emerald-700/30" : "bg-amber-900/20 border-amber-700/30"
+                  )}>
+                    <span className="font-medium text-white">{event.text}</span>
+                    <span className="text-xs text-gray-500 whitespace-nowrap ml-3">
+                      {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
+                    </span>
+                  </div>
+                )) : (
+                  <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
+                    <div className="text-center">
+                      <Activity size={24} className="mx-auto mb-2 opacity-30" />
+                      <p>Wacht op verkoop- of reserveringsactiviteit...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
