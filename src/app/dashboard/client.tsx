@@ -256,7 +256,6 @@ function ProjectCard({ project, stat }: { project: DashboardProject; stat?: Proj
         onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(237,255,0,0.1)"; }}
         onClick={!hasJingle ? () => router.push(`/dashboard/${project.slug}/units`) : undefined}
       >
-      >
         <div className="relative flex flex-col justify-between flex-1 p-7">
           <div className="mb-5 h-8 flex items-center">
             {logo
