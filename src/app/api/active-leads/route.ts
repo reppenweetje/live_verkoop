@@ -33,20 +33,22 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectSlug = searchParams.get("projectSlug") ?? "";
   // Actief = pinned_changed_at in de laatste 30 minuten
-  const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
   try {
-    // Gebruik Directus _or filter: actief als pinned_changed_at OF updated_at binnen 5 min
-    const params = new URLSearchParams({
-      "filter[_or][0][pinned_changed_at][_gte]": since,
-      "filter[_or][1][updated_at][_gte]":        since,
-      "fields": "id,first_name,last_name,email,pinned_changed_at,updated_at,tags,favourites",
-      "limit": "100",
-      "sort": "-pinned_changed_at",
-    });
+    // Node.js fetch hercodeerd brackets via WHATWG URL parser — gebruik pre-encoded %5B/%5D
+    // zodat Directus de OR-filter correct parseert (zie ook directus.ts)
+    const sincEnc = encodeURIComponent(since);
+    const qs = [
+      `filter%5B_or%5D%5B0%5D%5Bpinned_changed_at%5D%5B_gte%5D=${sincEnc}`,
+      `filter%5B_or%5D%5B1%5D%5Bupdated_at%5D%5B_gte%5D=${sincEnc}`,
+      `fields=id,first_name,last_name,email,pinned_changed_at,updated_at,tags,favourites`,
+      `limit=100`,
+      `sort=-updated_at`,
+    ].join("&");
 
     const res = await fetch(
-      `${DIRECTUS_URL}/items/customers?${params}`,
+      `${DIRECTUS_URL}/items/customers?${qs}`,
       {
         headers: { Authorization: `Bearer ${DIRECTUS_TOKEN}` },
         cache: "no-store",

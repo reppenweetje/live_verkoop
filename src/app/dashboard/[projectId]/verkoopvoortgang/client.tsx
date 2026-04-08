@@ -480,7 +480,7 @@ export default function VerkoopvoortgangClient({
               </span>
             </div>
             {activeLeads.length === 0 ? (
-              <p className="text-xs text-gray-600 py-2 text-center">Geen leads actief in afgelopen 5 min</p>
+              <p className="text-xs text-gray-600 py-2 text-center">Geen leads actief in afgelopen 30 min</p>
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto">
                 {activeLeads.map((lead) => (
