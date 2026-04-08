@@ -168,14 +168,21 @@ export function mapProject(project: DirectusProject): DashboardProject {
 // Leads met @repp.nl in hun e-mailadres zijn interne medewerkers en
 // worden overal uitgesloten: registraties, heatmap-tellers en lead-profielen.
 
-const INTERNAL_DOMAINS = ["@repp.nl"];
+const INTERNAL_DOMAINS = ["@repp.nl", "@erasauna.nl"];
+
+// Gebruikersnamen die altijd worden uitgefilterd (eigenaar/beheerder accounts)
+const INTERNAL_USERNAMES = ["theovanjacobus"];
 
 function isInternalEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const lower = email.toLowerCase();
 
-  // Domein filter (bijv. @repp.nl)
+  // Domein filter (bijv. @repp.nl, @erasauna.nl)
   if (INTERNAL_DOMAINS.some((d) => lower.includes(d))) return true;
+
+  // Gebruikersnaam filter (bijv. theovanjacobus@gmail.com)
+  const username = lower.split("@")[0].split("+")[0];
+  if (INTERNAL_USERNAMES.some((u) => username === u)) return true;
 
   // Subadres filter: alles na + en vóór @ dat "test" bevat
   // Matcht: +test, +test18, +finaltest, +mytest, etc.

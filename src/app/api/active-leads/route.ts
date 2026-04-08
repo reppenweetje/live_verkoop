@@ -5,12 +5,15 @@ export const dynamic = "force-dynamic";
 const DIRECTUS_URL = process.env.DIRECTUS_URL!;
 const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN!;
 
-const INTERNAL_DOMAINS = ["@repp.nl"];
+const INTERNAL_DOMAINS = ["@repp.nl", "@erasauna.nl"];
+const INTERNAL_USERNAMES = ["theovanjacobus"];
 
 function isInternalEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const lower = email.toLowerCase();
   if (INTERNAL_DOMAINS.some((d) => lower.includes(d))) return true;
+  const username = lower.split("@")[0].split("+")[0];
+  if (INTERNAL_USERNAMES.some((u) => username === u)) return true;
   const subMatch = lower.match(/\+([^@]+)@/);
   if (subMatch && subMatch[1].includes("test")) return true;
   return false;
