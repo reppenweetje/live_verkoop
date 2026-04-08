@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { KPICard } from "@/components/ui/kpi-card";
-import { Users, CheckCircle, RefreshCw, ChevronDown, ChevronUp, Phone, Mail, Building2, Anchor, CreditCard } from "lucide-react";
-import { format, parseISO, isAfter, subDays } from "date-fns";
+import { Users, CheckCircle, RefreshCw, ChevronDown, ChevronUp, Phone, Mail, Building2, Anchor, CreditCard, BellOff, Clock } from "lucide-react";
+import { format, parseISO, isAfter, subDays, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -131,6 +131,14 @@ export default function RegistrationsClient({ registrations: initialRegistration
     isAfter(parseISO(r.registeredAt), subDays(new Date(), 7))
   ).length;
   const withFinancing = registrations.filter((r) => r.financing === "ja").length;
+
+  // Stille leads: geregistreerd maar nog nooit iets gedaan (geen favorieten)
+  const stilleLeads = registrations
+    .filter((r) => r.pinnedUnitCodes.length === 0)
+    .sort((a, b) => parseISO(a.registeredAt).getTime() - parseISO(b.registeredAt).getTime());
+
+  const [stilleOpen, setStilleOpen] = useState(true);
+
   const toggleExpand = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
   return (
@@ -147,11 +155,121 @@ export default function RegistrationsClient({ registrations: initialRegistration
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-3 mb-8">
+        <div className="grid gap-6 grid-cols-2 sm:grid-cols-4 mb-8">
           <KPICard title="Totale Registraties" value={total} icon={Users} accentColor="yellow" />
           <KPICard title="Afgelopen 7 Dagen" value={thisWeek} icon={CheckCircle} accentColor="emerald" />
           <KPICard title="Met Financiering" value={withFinancing} icon={CreditCard} accentColor="gold" />
+          <KPICard title="Stille Leads" value={stilleLeads.length} icon={BellOff} accentColor="amber" />
         </div>
+
+        {/* Stille leads sectie */}
+        {stilleLeads.length > 0 && (
+          <div className="mb-6 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(251,146,60,0.25)", background: "rgba(251,146,60,0.04)" }}>
+            <button
+              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-orange-500/5 transition-colors"
+              onClick={() => setStilleOpen((o) => !o)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(251,146,60,0.15)" }}>
+                  <BellOff size={16} style={{ color: "#fb923c" }} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white" style={{ fontFamily: "'Montserrat',sans-serif" }}>
+                    Stille leads
+                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(251,146,60,0.2)", color: "#fb923c" }}>
+                      {stilleLeads.length}
+                    </span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Geregistreerd maar nog niks gedaan — geen favorieten, nooit teruggekomen</p>
+                </div>
+              </div>
+              {stilleOpen ? <ChevronUp size={16} className="text-gray-500 flex-shrink-0" /> : <ChevronDown size={16} className="text-gray-500 flex-shrink-0" />}
+            </button>
+
+            {stilleOpen && (
+              <div className="border-t" style={{ borderColor: "rgba(251,146,60,0.15)" }}>
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid rgba(251,146,60,0.1)" }}>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Naam</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">E-mail</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Geregistreerd</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stil sinds</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Financiering</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stilleLeads.map((reg, i) => {
+                      const dagenStil = differenceInDays(new Date(), parseISO(reg.registeredAt));
+                      const isOud = dagenStil > 14;
+                      return (
+                        <tr
+                          key={reg.id}
+                          className="hover:bg-orange-500/5 transition-colors"
+                          style={{ borderBottom: i < stilleLeads.length - 1 ? "1px solid rgba(251,146,60,0.08)" : undefined }}
+                        >
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c" }}
+                              >
+                                {reg.name.charAt(0)}
+                              </span>
+                              <Link
+                                href={`/dashboard/${projectId}/leads/${reg.id}`}
+                                className="text-sm font-semibold text-white hover:text-orange-300 transition-colors"
+                              >
+                                {reg.name}
+                              </Link>
+                              {reg.registrationType === "business" && (
+                                <span className="text-xs text-gray-600 ml-1">zakelijk</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-3">
+                            <a href={`mailto:${reg.email}`} className="text-sm text-gray-400 hover:text-orange-300 transition-colors">
+                              {reg.email}
+                            </a>
+                          </td>
+                          <td className="px-6 py-3">
+                            <p className="text-sm text-gray-400">
+                              {format(parseISO(reg.registeredAt), "d MMM yyyy", { locale: nl })}
+                            </p>
+                          </td>
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={11} style={{ color: isOud ? "#fb923c" : "#6b7280" }} />
+                              <span
+                                className="text-sm font-semibold"
+                                style={{ color: isOud ? "#fb923c" : "#9ca3af" }}
+                              >
+                                {dagenStil === 0 ? "Vandaag" : dagenStil === 1 ? "1 dag" : `${dagenStil} dagen`}
+                              </span>
+                              {isOud && (
+                                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(251,146,60,0.12)", color: "#fb923c" }}>
+                                  inactief
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-3">
+                            <FinancingBadge value={reg.financing} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div className="px-6 py-3" style={{ borderTop: "1px solid rgba(251,146,60,0.1)" }}>
+                  <p className="text-xs text-gray-600">
+                    Tip: neem contact op met stille leads voor het verkoopmoment — ze zijn wel geïnteresseerd, maar hebben een zetje nodig.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <Card>
           <div className="overflow-x-auto">
