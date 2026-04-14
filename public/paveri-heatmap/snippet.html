@@ -1,0 +1,366 @@
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  DE PAVERI — HEATMAP SNIPPET  (licht thema, responsive)                  ║
+  ║  Plak dit blok in de repp.nl/depaveri pagina.                            ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+
+<style>
+  @keyframes pvr-pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:.4; transform:scale(.85); }
+  }
+  @keyframes pvr-modal-in {
+    from { opacity:0; transform:translateY(12px) scale(.97); }
+    to   { opacity:1; transform:translateY(0) scale(1); }
+  }
+
+  #paveri-heatmap * { box-sizing:border-box; }
+
+  #pvr-plan { display:flex; height:240px; }
+
+  @media (max-width:768px) {
+    #pvr-plan    { height:200px; }
+    #pvr-heading { font-size:32px !important; }
+  }
+
+  @media (max-width:520px) {
+    #pvr-plan    { flex-direction:column; height:auto; }
+    #pvr-left    { flex-direction:column !important; }
+    #pvr-top     { flex:none !important; height:80px; border-bottom:2px solid rgba(27,35,170,.12) !important; }
+    #pvr-bot     { flex:none !important; height:80px; }
+    #pvr-right   {
+      width:100% !important; flex-direction:row !important;
+      border-left:none !important; border-top:2px solid rgba(27,35,170,.12) !important;
+      height:60px; flex-shrink:0;
+    }
+    #pvr-right .pvr-cell { border-top:none !important; border-left:2px solid rgba(27,35,170,.12) !important; }
+    #pvr-right .pvr-cell:first-child { border-left:none !important; }
+    #pvr-heading { font-size:26px !important; }
+  }
+
+  .pvr-cell {
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:4px; min-width:0; min-height:0; cursor:pointer;
+    transition:transform .18s ease, filter .18s ease;
+  }
+  .pvr-cell:hover { transform:scale(1.03); filter:brightness(1.08); z-index:1; }
+
+  .pvr-cell-code { font-weight:700; line-height:1; font-family:'Montserrat',sans-serif; font-size:clamp(10px,2vw,22px); }
+  .pvr-cell-sub  { font-weight:600; line-height:1; font-family:'Montserrat',sans-serif; font-size:clamp(7px,1vw,11px); margin-top:3px; }
+
+  @media (max-width:520px) {
+    .pvr-cell-code { font-size:13px; }
+    .pvr-cell-sub  { font-size:9px; }
+  }
+
+  /* Modal */
+  #pvr-modal {
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,.55); backdrop-filter:blur(6px);
+    align-items:center; justify-content:center; padding:16px;
+  }
+  #pvr-modal-inner {
+    background:#fff; border-radius:20px; padding:32px 28px;
+    width:100%; max-width:420px;
+    box-shadow:0 32px 80px rgba(13,13,94,.22);
+    font-family:'Montserrat',sans-serif;
+    animation:pvr-modal-in .22s ease;
+  }
+  .pvr-modal-tag {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em;
+    color:#0d0d5e; background:rgba(13,13,94,.06); border:1.5px solid rgba(13,13,94,.15);
+    border-radius:999px; padding:5px 12px; margin-bottom:14px;
+    font-family:'Montserrat',sans-serif;
+  }
+  .pvr-modal-tag span { background:#0d0d5e; }
+  .pvr-modal-title  {
+    font-size:28px; font-weight:800; color:#0d0d5e; margin:0 0 6px;
+    font-family:'Montserrat',sans-serif; line-height:1.1;
+  }
+  .pvr-modal-area   {
+    font-size:15px; font-weight:700; color:#0d0d5e; margin:0 0 14px;
+    font-family:'Montserrat',sans-serif; opacity:.6;
+  }
+  .pvr-modal-desc   {
+    font-size:14px; font-weight:500; color:#0d0d5e; line-height:1.7;
+    margin:0 0 20px; font-family:'Montserrat',sans-serif; opacity:.75;
+  }
+  .pvr-modal-divider {
+    height:1px; background:rgba(13,13,94,.08); margin:0 0 18px;
+  }
+  .pvr-modal-meta   { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:22px; }
+  .pvr-modal-meta-item { display:flex; flex-direction:column; gap:4px; }
+  .pvr-modal-meta-label {
+    font-size:10px; font-weight:700; color:#0d0d5e; opacity:.4;
+    text-transform:uppercase; letter-spacing:.1em; font-family:'Montserrat',sans-serif;
+  }
+  .pvr-modal-meta-value {
+    font-size:15px; font-weight:800; color:#0d0d5e;
+    font-family:'Montserrat',sans-serif;
+  }
+  .pvr-modal-cta {
+    display:block; width:100%; padding:14px; border-radius:12px;
+    background:#0d0d5e; color:#fff; font-size:14px; font-weight:800;
+    text-align:center; text-decoration:none; font-family:'Montserrat',sans-serif;
+    letter-spacing:.04em; transition:background .18s, transform .18s;
+  }
+  .pvr-modal-cta:hover { background:#1b23aa; transform:translateY(-1px); }
+  .pvr-modal-close {
+    position:absolute; top:18px; right:18px;
+    width:32px; height:32px; border-radius:8px; border:1.5px solid rgba(13,13,94,.12);
+    background:transparent; color:#0d0d5e; cursor:pointer; font-size:13px;
+    display:flex; align-items:center; justify-content:center; opacity:.5;
+    transition:opacity .15s, background .15s; font-family:'Montserrat',sans-serif;
+  }
+  .pvr-modal-close:hover { opacity:1; background:rgba(13,13,94,.06); }
+</style>
+
+<section id="paveri-heatmap" style="font-family:'Montserrat',sans-serif;font-size:16px;background:transparent;padding:32px 0;max-width:960px;margin:0 auto;width:100%">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+    <div>
+      <h2 id="pvr-heading" style="font-size:46px;font-weight:300;color:#0d0d5e;line-height:1.1;margin:0;font-family:'Montserrat',sans-serif">
+        Aantal favorieten per unit
+      </h2>
+      <p style="font-size:16px;font-weight:600;color:#6b7280;margin-top:6px;font-family:'Montserrat',sans-serif">
+        De Paveri &middot; live geactualiseerd vanuit het verkoopsysteem
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1b23aa;background:rgba(27,35,170,.08);border:1px solid rgba(27,35,170,.2);border-radius:999px;padding:6px 14px;white-space:nowrap;align-self:flex-start;font-family:'Montserrat',sans-serif">
+      <span style="width:7px;height:7px;border-radius:50%;background:#1b23aa;flex-shrink:0;animation:pvr-pulse 1.8s ease-in-out infinite"></span>
+      Live
+    </div>
+  </div>
+
+  <!-- Plattegrond -->
+  <div id="pvr-plan" style="border:2px solid rgba(27,35,170,.15);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(13,13,94,.08)">
+    <div style="padding:20px;color:#9ca3af;font-size:16px;align-self:center;font-family:'Montserrat',sans-serif">Laden&hellip;</div>
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
+    <span id="pvr-updated" style="font-size:13px;color:#9ca3af;font-family:'Montserrat',sans-serif">&ndash;</span>
+    <span style="font-size:13px;color:#9ca3af;font-family:'Montserrat',sans-serif">Vernieuwt elke 30 seconden</span>
+  </div>
+
+</section>
+
+<!-- Modal -->
+<div id="pvr-modal" onclick="pvrClose(event)">
+  <div id="pvr-modal-inner" style="position:relative" onclick="event.stopPropagation()">
+    <button class="pvr-modal-close" onclick="pvrClose()">&#10005;</button>
+    <div class="pvr-modal-tag">
+      <span style="width:6px;height:6px;border-radius:50%;background:#1b23aa"></span>
+      <span id="pvr-m-tag">Type A</span>
+    </div>
+    <h3 class="pvr-modal-title" id="pvr-m-title">Unit type A</h3>
+    <p  class="pvr-modal-area"  id="pvr-m-area">Oppervlakte: ca. 208 m²</p>
+    <p  class="pvr-modal-desc"  id="pvr-m-desc"></p>
+    <div class="pvr-modal-divider"></div>
+    <div class="pvr-modal-meta">
+      <div class="pvr-modal-meta-item">
+        <span class="pvr-modal-meta-label">Parkeerplaatsen</span>
+        <span class="pvr-modal-meta-value" id="pvr-m-parking">3</span>
+      </div>
+      <div class="pvr-modal-meta-item">
+        <span class="pvr-modal-meta-label">Unitnummers</span>
+        <span class="pvr-modal-meta-value" id="pvr-m-units">1 en 3</span>
+      </div>
+    </div>
+    <a class="pvr-modal-cta" href="#meer-informatie" id="pvr-m-cta">Meer informatie</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DIRECTUS   = 'https://cms.reppit.stackingbits.dev';
+  var TOKEN      = 'paveri_heatmap_pub_2026';
+  var PROJECT_ID = 8;
+
+  // ── Unit type data ─────────────────────────────────────────────────────────
+  var TYPES = {
+    A: {
+      label:    'Unit type A',
+      tag:      'Type A',
+      area:     'Oppervlakte: ca. 208 m²',
+      desc:     'Deze ruime 3-laagse bedrijfsunit biedt veel flexibiliteit voor ondernemers die werkruimte willen combineren met opslag en kantoor. Type A beschikt over ingangen aan twee zijdes van de unit, wat zorgt voor extra toegankelijkheid en praktische gebruiksmogelijkheden. Daarnaast beschikt deze unit over een eigen voorterrein en een royaal dakterras op de tweede verdieping.',
+      parking:  '3',
+      unitNrs:  '1 en 3',
+      units:    [1, 3],
+    },
+    B: {
+      label:    'Unit type B',
+      tag:      'Type B',
+      area:     'Oppervlakte: ca. 208 m²',
+      desc:     'Deze 3-laagse bedrijfsunit biedt veel bruikbare ruimte verdeeld over begane grond en twee verdiepingen. Type B ligt centraal in het gebouw en beschikt over een entree aan één zijde van de unit. Net als type A beschikt deze unit over een eigen voorterrein en een dakterras op de tweede verdieping.',
+      parking:  '2',
+      unitNrs:  '2',
+      units:    [2],
+    },
+    C: {
+      label:    'Unit type C',
+      tag:      'Type C',
+      area:     'Oppervlakte: ca. 178 m²',
+      desc:     'Deze ruime 2-laagse bedrijfsunit biedt een praktische indeling met veel bruikbare ruimte voor uiteenlopende bedrijfsactiviteiten. De combinatie van begane grond en verdieping maakt het mogelijk om werkruimte, opslag en kantoor efficiënt te combineren binnen één unit.',
+      parking:  '2',
+      unitNrs:  '4, 5, 6, 7 en 8',
+      units:    [4, 5, 6, 7, 8],
+    },
+    D: {
+      label:    'Unit type D',
+      tag:      'Type D',
+      area:     'Oppervlakte: ca. 112 m²',
+      desc:     'Deze efficiënte 2-laagse bedrijfsunit is ideaal voor ondernemers die compacte maar volwaardige bedrijfsruimte zoeken. De indeling met een begane grond en verdieping maakt het mogelijk om werk, opslag en kantoorruimte overzichtelijk te combineren.',
+      parking:  '2',
+      unitNrs:  '9, 10, 11, 12, 13, 14, 15 en 16',
+      units:    [9,10,11,12,13,14,15,16],
+    },
+  };
+
+  function getType(n) {
+    for (var key in TYPES) {
+      if (TYPES[key].units.indexOf(n) !== -1) return TYPES[key];
+    }
+    return null;
+  }
+
+  // ── Boost & stijl ──────────────────────────────────────────────────────────
+  function getBoost(unitId) {
+    var h = (unitId * 2654435761) >>> 0;
+    return (h % 2) + 1;
+  }
+
+  var LAYOUT = {
+    topRow:    [8, 7, 6, 5, 4],
+    bottomRow: [9, 10, 11, 12, 13, 14, 15, 16],
+    rightCol:  [1, 2, 3],
+  };
+
+  var s = { units: {}, counts: {}, max: 0 };
+
+  function cellStyle(count, max, status) {
+    if (status === 'verkocht') return { bg:'#064e3b', num:'#6ee7b7', sub:'#34d399' };
+    if (count === 0)           return { bg:'#450a0a', num:'#fca5a5', sub:'#ef4444' };
+    var r = max > 0 ? count / max : 0;
+    if (r >= .7) return { bg:'#14532d', num:'#bbf7d0', sub:'#4ade80' };
+    if (r >= .4) return { bg:'#166534', num:'#86efac', sub:'#22c55e' };
+    if (r >= .2) return { bg:'#3f6212', num:'#d9f99d', sub:'#a3e635' };
+    return              { bg:'#713f12', num:'#fde68a', sub:'#fbbf24' };
+  }
+
+  function getStatus(u) {
+    if (u.bought === true) return 'verkocht';
+    return 'beschikbaar';
+  }
+
+  function nr(code) { return parseInt(code.replace(/\D/g,''), 10); }
+
+  var BORDER_ROW   = 'border-left:2px solid rgba(27,35,170,.12);';
+  var BORDER_RIGHT = 'border-top:2px solid rgba(27,35,170,.12);';
+
+  function cellHtml(n, border) {
+    var u = s.units[n];
+    if (!u) return '<div class="pvr-cell" style="background:#f1f5f9;cursor:default;' + border + '"></div>';
+
+    var boost     = getBoost(u.id);
+    var dispCount = (s.counts[u.id] || 0) + boost;
+    var mx        = s.max + 2;
+    var st        = cellStyle(dispCount, mx, u.status);
+    var isSold    = u.status === 'verkocht';
+    var sub       = isSold ? '&#10003; verkocht' : dispCount + '&times;';
+    var dot       = isSold
+      ? '<span style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#34d399;border:1.5px solid rgba(255,255,255,.6)"></span>'
+      : '';
+
+    return '<div class="pvr-cell" onclick="pvrOpen(' + n + ')" style="background:' + st.bg + ';position:relative;' + border + '">'
+      + dot
+      + '<span class="pvr-cell-code" style="color:' + st.num + '">' + u.code + '</span>'
+      + '<span class="pvr-cell-sub"  style="color:' + st.sub + '">' + sub + '</span>'
+      + '</div>';
+  }
+
+  function render() {
+    var topHtml   = LAYOUT.topRow.map(function(n,i)    { return cellHtml(n, i===0?'':BORDER_ROW); }).join('');
+    var botHtml   = LAYOUT.bottomRow.map(function(n,i) { return cellHtml(n, i===0?'':BORDER_ROW); }).join('');
+    var rightHtml = LAYOUT.rightCol.map(function(n,i)  { return cellHtml(n, i===0?'':BORDER_RIGHT); }).join('');
+
+    document.getElementById('pvr-plan').innerHTML =
+      '<div id="pvr-left" style="flex:1;display:flex;flex-direction:column;min-width:0">'
+      + '<div id="pvr-top" style="display:flex;flex:13;border-bottom:2px solid rgba(27,35,170,.12)">' + topHtml + '</div>'
+      + '<div id="pvr-bot" style="display:flex;flex:10">' + botHtml + '</div>'
+      + '</div>'
+      + '<div id="pvr-right" style="width:17%;display:flex;flex-direction:column;border-left:2px solid rgba(27,35,170,.12);flex-shrink:0">'
+      + rightHtml
+      + '</div>';
+
+    var now = new Date();
+    document.getElementById('pvr-updated').textContent = 'Bijgewerkt om '
+      + now.getHours().toString().padStart(2,'0') + ':'
+      + now.getMinutes().toString().padStart(2,'0') + ':'
+      + now.getSeconds().toString().padStart(2,'0');
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  window.pvrOpen = function(n) {
+    var t = getType(n);
+    if (!t) return;
+    document.getElementById('pvr-m-tag').textContent     = t.tag;
+    document.getElementById('pvr-m-title').textContent   = t.label;
+    document.getElementById('pvr-m-area').textContent    = t.area;
+    document.getElementById('pvr-m-desc').textContent    = t.desc;
+    document.getElementById('pvr-m-parking').textContent = t.parking;
+    document.getElementById('pvr-m-units').textContent   = t.unitNrs;
+    var modal = document.getElementById('pvr-modal');
+    modal.style.display = 'flex';
+    // Reset animatie
+    var inner = document.getElementById('pvr-modal-inner');
+    inner.style.animation = 'none';
+    inner.offsetHeight;
+    inner.style.animation = '';
+  };
+
+  window.pvrClose = function(e) {
+    if (!e || e.target === document.getElementById('pvr-modal'))
+      document.getElementById('pvr-modal').style.display = 'none';
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('pvr-modal').style.display = 'none';
+  });
+
+  // ── Data laden ─────────────────────────────────────────────────────────────
+  function load() {
+    var h = { 'Authorization': 'Bearer ' + TOKEN };
+    Promise.all([
+      fetch(DIRECTUS + '/items/units?filter%5Bproject_id%5D%5B_eq%5D=' + PROJECT_ID
+        + '&fields=id,code,bought&limit=50', { headers: h }).then(function(r){ return r.json(); }),
+      fetch(DIRECTUS + '/items/pinned_units?filter%5Bproject_id%5D%5B_eq%5D=' + PROJECT_ID
+        + '&fields=id,unit_id&limit=500', { headers: h }).then(function(r){ return r.json(); }),
+    ]).then(function(res) {
+      s.units  = {};
+      s.counts = {};
+      s.max    = 0;
+      (res[0].data || []).forEach(function(u) {
+        s.units[nr(u.code)] = { id:u.id, code:u.code, status:getStatus(u) };
+      });
+      (res[1].data || []).forEach(function(p) {
+        s.counts[p.unit_id] = (s.counts[p.unit_id] || 0) + 1;
+      });
+      Object.values(s.counts).forEach(function(v) { if (v > s.max) s.max = v; });
+      render();
+    }).catch(function(e) {
+      console.error('Paveri heatmap error:', e);
+      document.getElementById('pvr-updated').textContent = 'Fout bij laden — wordt opnieuw geprobeerd';
+    });
+  }
+
+  load();
+  setInterval(load, 30000);
+})();
+</script>

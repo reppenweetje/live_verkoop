@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>De Paveri — Interesse per unit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d5e;
+      --bg-card:   rgba(27, 35, 170, 0.18);
+      --border:    rgba(255, 255, 255, 0.15);
+      --neon:      #edff00;
+      --font:      'Montserrat', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: #f8f9fa;
+      color: #0d0d5e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .section {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .header-left h2 {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 900;
+      color: #0d0d5e;
+      line-height: 1.1;
+    }
+
+    .header-left p {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #1b23aa;
+      background: rgba(27,35,170,0.08);
+      border: 1px solid rgba(27,35,170,0.2);
+      border-radius: 999px;
+      padding: 5px 12px;
+      white-space: nowrap;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #1b23aa;
+      animation: pulse 1.8s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      color: #6b7280;
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ── Floor plan grid ── */
+    .floorplan {
+      border: 2px solid rgba(27,35,170,0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      height: 260px;
+      gap: 0;
+      box-shadow: 0 4px 24px rgba(13,13,94,0.08);
+    }
+
+    .fp-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .fp-row {
+      display: flex;
+      gap: 0;
+    }
+
+    .fp-row.top { flex: 13; border-bottom: 2px solid var(--border); }
+    .fp-row.bottom { flex: 10; }
+
+    .fp-right {
+      width: 17%;
+      display: flex;
+      flex-direction: column;
+      border-left: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .unit-cell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      cursor: pointer;
+      position: relative;
+      transition: filter 0.15s;
+      min-width: 0;
+      min-height: 0;
+      border-left: 2px solid rgba(27,35,170,0.12);
+      user-select: none;
+    }
+
+    .unit-cell:first-child { border-left: none; }
+
+    .fp-right .unit-cell {
+      border-left: none;
+      border-top: 2px solid rgba(27,35,170,0.12);
+    }
+
+    .fp-right .unit-cell:first-child { border-top: none; }
+
+    .unit-cell:hover { filter: brightness(1.3); }
+    .unit-cell:active { filter: brightness(1.5); }
+
+    .unit-code {
+      font-size: clamp(11px, 2vw, 22px);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .unit-sub {
+      font-size: clamp(7px, 0.9vw, 11px);
+      font-weight: 600;
+      margin-top: 3px;
+      line-height: 1;
+    }
+
+    .status-dot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.5);
+    }
+
+    /* ── Tooltip/modal overlay ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.hidden { display: none; }
+
+    .modal {
+      background: #fff;
+      border: 1px solid rgba(27,35,170,0.15);
+      border-radius: 18px;
+      padding: 24px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #1b23aa;
+      margin-bottom: 4px;
+    }
+
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #0d0d5e;
+    }
+
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: transparent;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.15s;
+    }
+
+    .modal-close:hover { background: #f3f4f6; }
+
+    .modal-count {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(27,35,170,0.06);
+      border: 1px solid rgba(27,35,170,0.12);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1b23aa;
+    }
+
+    .modal-count-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #1b23aa;
+      animation: pulse 1.8s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .modal-note {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .footer-info {
+      font-size: 0.65rem;
+      color: #9ca3af;
+    }
+
+    .refresh-note {
+      font-size: 0.65rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+<div class="section">
+  <div class="header">
+    <div class="header-left">
+      <h2>Interesse per unit</h2>
+      <p>De Paveri · live geactualiseerd vanuit het verkoopsysteem</p>
+    </div>
+    <div class="live-badge">
+      <span class="live-dot"></span>
+      Live
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#14532d;border:2px solid #166534"></span>
+      Veel interesse
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#3f6212;border:2px solid #4d7c0f"></span>
+      Enige interesse
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#713f00;border:2px solid #854d00"></span>
+      Gereserveerd
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#064e3b;border:2px solid #065f46"></span>
+      Verkocht
+    </div>
+  </div>
+
+  <div class="floorplan" id="floorplan">
+    <!-- Gevuld door JS -->
+  </div>
+
+  <div class="footer">
+    <span class="footer-info" id="last-updated">Laden…</span>
+    <span class="refresh-note">Vernieuwt elke 30 seconden</span>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop hidden" id="modal-backdrop" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <div class="modal-label">Interesse</div>
+        <div class="modal-title" id="modal-title">U-1</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-count">
+      <span class="modal-count-dot"></span>
+      <span id="modal-count-text">Laden…</span>
+    </div>
+    <div class="modal-note">Klik buiten dit venster om te sluiten</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DIRECTUS   = 'https://cms.reppit.stackingbits.dev';
+  var TOKEN      = 'paveri_heatmap_pub_2026';
+  var PROJECT_ID = 8;
+
+  // Deterministische random boost per unit (+1, +2 of +3) — consistent bij elke refresh
+  function getBoost(unitId) {
+    var h = (unitId * 2654435761) >>> 0;  // Knuth multiplicative hash
+    return (h % 3) + 1;                   // Resultaat: 1, 2 of 3
+  }
+
+  // De Paveri plattegrond layout (zelfde als PAVERI_LAYOUT in de React app)
+  var LAYOUT = {
+    topRow:    [8, 7, 6, 5, 4],
+    bottomRow: [9, 10, 11, 12, 13, 14, 15, 16],
+    rightCol:  [1, 2, 3],
+  };
+
+  var state = {
+    units:        {},   // unitNr → { id, code, status, price }
+    pinnedCounts: {},   // unitId → count
+    maxCount:     0,
+  };
+
+  // ── Kleurlogica — identiek aan getCellStyle() in floor-plan-heatmap.tsx ──────
+  function getCellStyle(count, max, status) {
+    if (status === 'coming_soon') return { bg: '#1e293b', numColor: '#334155', countColor: '#334155' };
+    if (status === 'verkocht')    return { bg: '#064e3b', numColor: '#6ee7b7', countColor: '#34d399', dotColor: '#34d399' };
+    if (status === 'gereserveerd') return { bg: '#713f00', numColor: '#fef08a', countColor: '#facc15', dotColor: '#facc15' };
+    if (count === 0)               return { bg: '#450a0a', numColor: '#fca5a5', countColor: '#ef4444' };
+    var ratio = max > 0 ? count / max : 0;
+    if (ratio >= 0.7) return { bg: '#14532d', numColor: '#bbf7d0', countColor: '#4ade80' };
+    if (ratio >= 0.4) return { bg: '#166534', numColor: '#86efac', countColor: '#22c55e' };
+    if (ratio >= 0.2) return { bg: '#3f6212', numColor: '#d9f99d', countColor: '#a3e635' };
+    return               { bg: '#713f12', numColor: '#fde68a', countColor: '#fbbf24' };
+  }
+
+  // ── Status bepalen vanuit Directus velden ──────────────────────────────────
+  function getStatus(unit) {
+    if (unit.bought === true)    return 'verkocht';
+    if (unit.reserved_at && !unit.bought_at) return 'gereserveerd';
+    return 'beschikbaar';
+  }
+
+  // ── Unit nummer uit code halen (U-8 → 8) ──────────────────────────────────
+  function unitNr(code) {
+    return parseInt(code.replace(/\D/g, ''), 10);
+  }
+
+  // ── HTML renderen ──────────────────────────────────────────────────────────
+  function renderCell(nr) {
+    var u = state.units[nr];
+    if (!u) return '<div class="unit-cell" style="background:#f8fafc;flex:1"></div>';
+
+    var boost        = getBoost(u.id);
+    var realCount    = state.pinnedCounts[u.id] || 0;
+    var displayCount = realCount + boost;
+    var max          = state.maxCount + 3;  // max mogelijke boost is 3
+    var s            = getCellStyle(displayCount, max, u.status);
+    var isSold       = u.status === 'verkocht';
+    var isReserved   = u.status === 'gereserveerd';
+    var isCS         = u.status === 'coming_soon';
+    var subLabel     = isCS ? 'binnenkort' : isSold ? '✓ verkocht' : isReserved ? '◷ reserv.' : displayCount + '×';
+
+    var dot = '';
+    if (isSold)     dot = '<span class="status-dot" style="background:#34d399"></span>';
+    if (isReserved) dot = '<span class="status-dot" style="background:#facc15"></span>';
+
+    var clickable = !isCS;
+    var onclick   = clickable ? 'onclick="openModal(' + nr + ')"' : '';
+
+    return '<div class="unit-cell" '
+      + onclick
+      + ' style="background:' + s.bg + ';flex:1;cursor:' + (clickable ? 'pointer' : 'default') + '"'
+      + ' title="' + u.code + (realCount > 0 ? ' — ' + realCount + ' interesse' : '') + '">'
+      + dot
+      + '<span class="unit-code" style="color:' + s.numColor + '">' + u.code + '</span>'
+      + '<span class="unit-sub" style="color:' + s.countColor + '">' + subLabel + '</span>'
+      + '</div>';
+  }
+
+  function render() {
+    var topCells    = LAYOUT.topRow.map(renderCell).join('');
+    var bottomCells = LAYOUT.bottomRow.map(renderCell).join('');
+    var rightCells  = LAYOUT.rightCol.map(function(n) {
+      var cell = renderCell(n);
+      // Verwijder border-left voor rechterkolom
+      return cell.replace('class="unit-cell"', 'class="unit-cell" data-right="1"');
+    }).join('');
+
+    document.getElementById('floorplan').innerHTML =
+      '<div class="fp-left">'
+      + '<div class="fp-row top">' + topCells + '</div>'
+      + '<div class="fp-row bottom">' + bottomCells + '</div>'
+      + '</div>'
+      + '<div class="fp-right">' + rightCells + '</div>';
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  window.openModal = function(nr) {
+    var u = state.units[nr];
+    if (!u) return;
+    var realCount = state.pinnedCounts[u.id] || 0;
+    document.getElementById('modal-title').textContent = u.code;
+    document.getElementById('modal-count-text').textContent =
+      realCount === 0
+        ? 'Nog geen geregistreerde interesse'
+        : realCount + ' geregistreerde interesse' + (realCount !== 1 ? 's' : '');
+    document.getElementById('modal-backdrop').classList.remove('hidden');
+  };
+
+  window.closeModal = function(e) {
+    if (!e || e.target === document.getElementById('modal-backdrop')) {
+      document.getElementById('modal-backdrop').classList.add('hidden');
+    }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('modal-backdrop').classList.add('hidden');
+  });
+
+  // ── Data ophalen uit Directus ──────────────────────────────────────────────
+  function fetchData() {
+    var headers = { 'Authorization': 'Bearer ' + TOKEN };
+
+    var unitsUrl   = DIRECTUS + '/items/units?filter%5Bproject_id%5D%5B_eq%5D=' + PROJECT_ID
+                   + '&fields=id,code,name,floor,price,bought,reserved_at,bought_at&limit=50&sort=code';
+    var pinnedUrl  = DIRECTUS + '/items/pinned_units?filter%5Bproject_id%5D%5B_eq%5D=' + PROJECT_ID
+                   + '&fields=id,unit_id&limit=500';
+
+    Promise.all([
+      fetch(unitsUrl,  { headers: headers }).then(function(r) { return r.json(); }),
+      fetch(pinnedUrl, { headers: headers }).then(function(r) { return r.json(); }),
+    ]).then(function(results) {
+      var units  = (results[0].data || []);
+      var pinned = (results[1].data || []);
+
+      // Units indexeren op nummer
+      state.units = {};
+      units.forEach(function(u) {
+        var nr = unitNr(u.code);
+        state.units[nr] = {
+          id:     u.id,
+          code:   u.code,
+          status: getStatus(u),
+          price:  u.price,
+        };
+      });
+
+      // Pinned counts berekenen
+      state.pinnedCounts = {};
+      pinned.forEach(function(p) {
+        state.pinnedCounts[p.unit_id] = (state.pinnedCounts[p.unit_id] || 0) + 1;
+      });
+
+      // Max count berekenen (voor kleurschaling)
+      state.maxCount = Object.values(state.pinnedCounts).reduce(function(m, v) {
+        return Math.max(m, v);
+      }, 0);
+
+      render();
+
+      var now = new Date();
+      document.getElementById('last-updated').textContent =
+        'Bijgewerkt om ' + now.getHours().toString().padStart(2,'0') + ':'
+        + now.getMinutes().toString().padStart(2,'0') + ':'
+        + now.getSeconds().toString().padStart(2,'0');
+    }).catch(function(err) {
+      console.error('Heatmap fout:', err);
+      document.getElementById('last-updated').textContent = 'Fout bij laden — wordt opnieuw geprobeerd…';
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  fetchData();
+  setInterval(fetchData, 30000);
+})();
+</script>
+
+</body>
+</html>

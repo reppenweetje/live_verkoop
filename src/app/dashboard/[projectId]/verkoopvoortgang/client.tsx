@@ -611,16 +611,23 @@ export default function VerkoopvoortgangClient({
               </div>
 
               {activeLeads.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs text-gray-600 text-center">Geen leads actief in afgelopen 30 min</p>
+                <div className="flex-1 flex flex-col items-center justify-center gap-2">
+                  <p className="text-xs text-gray-600 text-center">Geen leads live in kopen.repp.nl</p>
+                  <p className="text-xs text-gray-700 text-center">Tracker script vereist op kopen.repp.nl</p>
                 </div>
               ) : (
                 <div className="flex-1 space-y-2 overflow-y-auto max-h-44">
                   {activeLeads.map((lead) => (
                     <div key={lead.id} className="flex items-center justify-between py-1.5 border-b border-blue-800/30 last:border-0">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-6 h-6 rounded-full bg-blue-700/50 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                          {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
+                        <span className="relative flex-shrink-0">
+                          <span className="w-6 h-6 rounded-full bg-blue-700/50 flex items-center justify-center text-xs font-bold text-white">
+                            {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
+                          </span>
+                          {"source" in lead && (lead as ActiveLead & { source?: string }).source === "heartbeat" && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 animate-pulse"
+                              style={{ borderColor: "rgba(15,15,80,0.9)" }} />
+                          )}
                         </span>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-white truncate">{lead.firstName} {lead.lastName}</p>
@@ -638,7 +645,7 @@ export default function VerkoopvoortgangClient({
               )}
 
               <p className="text-xs text-gray-600 mt-3 pt-2 border-t border-blue-800/30">
-                Actief in Directus · laatste 5 min · elke 3s
+                🟢 Live browsing · elke 30s · 🕐 Favoriet-activiteit · 30 min
               </p>
             </div>
           </div>
