@@ -304,6 +304,228 @@ function Elster11FloorPlan({ unitMap, pinnedCounts, maxCount, pinnedLeads, onUni
   );
 }
 
+// ─── 6th Grid plattegrond (3 verdiepingen) ────────────────────────────────────
+
+type G6Shape =
+  | { code: string; kind: "rect"; x: number; y: number; w: number; h: number }
+  | { code: string; kind: "path"; d: string; cx: number; cy: number };
+
+const G6_BG: G6Shape[] = [
+  { code:"0.1",  kind:"rect", x:1118.3, y:63,    w:67.5,  h:154.6 },
+  { code:"0.2",  kind:"rect", x:1048,   y:63.1,  w:67.5,  h:154.6 },
+  { code:"0.3",  kind:"rect", x:1047.9, y:220.4, w:137.9, h:71.4  },
+  { code:"0.4",  kind:"rect", x:1047.9, y:294.5, w:137.9, h:71.4  },
+  { code:"0.5",  kind:"rect", x:1048,   y:368.6, w:137.9, h:71.4  },
+  { code:"0.6",  kind:"rect", x:1048,   y:442.7, w:137.9, h:71.4  },
+  { code:"0.7",  kind:"rect", x:1048,   y:516.8, w:137.9, h:71.4  },
+  { code:"0.8",  kind:"rect", x:815.1,  y:522.9, w:137.9, h:65.3  },
+  { code:"0.9",  kind:"rect", x:815.1,  y:455,   w:137.9, h:65.3  },
+  { code:"0.10", kind:"rect", x:815,    y:387,   w:137.9, h:65.3  },
+  { code:"0.11", kind:"rect", x:815,    y:319.1, w:137.9, h:65.3  },
+  { code:"0.12", kind:"path", cx:870, cy:240, d:"M952.9,280.1v22.7c0,7.5-6.1,13.6-13.6,13.6h-110.6c-7.5,0-13.6-6.1-13.6-13.6v-109.8c0-7.5,6.1-13.6,13.6-13.6h73.2c7.5,0,13.6,6.1,13.6,13.6v73.5h23.8c7.5,0,13.6,6.1,13.6,13.6h0Z" },
+  { code:"0.13", kind:"rect", x:885.4,  y:62.9,  w:67.5,  h:113.7 },
+  { code:"0.14", kind:"rect", x:815.2,  y:63,    w:67.5,  h:113.7 },
+  { code:"0.15", kind:"rect", x:612.4,  y:438.9, w:107.8, h:62.2  },
+  { code:"0.16", kind:"rect", x:612.4,  y:374,   w:107.8, h:62.2  },
+  { code:"0.17", kind:"rect", x:612.4,  y:309.1, w:107.8, h:62.2  },
+  { code:"0.18", kind:"rect", x:612.3,  y:244.2, w:107.8, h:62.2  },
+  { code:"0.19", kind:"rect", x:612.4,  y:179.3, w:107.8, h:62.2  },
+  { code:"0.20", kind:"rect", x:612.3,  y:62.9,  w:107.8, h:113.7 },
+  { code:"0.21", kind:"rect", x:282.8,  y:336.2, w:224,   h:65.9  },
+  { code:"0.22", kind:"rect", x:282.8,  y:267.6, w:224,   h:65.9  },
+  { code:"0.23", kind:"rect", x:282.7,  y:199,   w:224,   h:65.9  },
+  { code:"0.24", kind:"rect", x:396.1,  y:63,    w:110.6, h:133.3 },
+  { code:"0.25", kind:"rect", x:282.8,  y:63,    w:110.6, h:133.3 },
+  { code:"0.26", kind:"rect", x:508,    y:697.9, w:65.3,  h:137.9 },
+  { code:"0.27", kind:"rect", x:576.1,  y:697.9, w:65.3,  h:137.9 },
+  { code:"0.28", kind:"rect", x:644.1,  y:697.8, w:65.3,  h:137.9 },
+  { code:"0.29", kind:"rect", x:712.2,  y:697.9, w:65.3,  h:137.9 },
+  { code:"0.30", kind:"rect", x:780.2,  y:697.9, w:65.3,  h:137.9 },
+  { code:"0.31", kind:"rect", x:848.2,  y:697.9, w:65.3,  h:137.9 },
+  { code:"0.32", kind:"rect", x:916.3,  y:697.9, w:65.3,  h:137.9 },
+  { code:"0.33", kind:"rect", x:984.4,  y:697.9, w:65.3,  h:137.9 },
+  { code:"0.34", kind:"rect", x:1052.4, y:697.9, w:65.3,  h:137.9 },
+  { code:"0.35", kind:"rect", x:1120.5, y:697.9, w:65.3,  h:137.9 },
+];
+
+const G6_V1: G6Shape[] = [
+  { code:"1.1",  kind:"rect", x:1047.9, y:63.1,  w:137.9, h:72.7  },
+  { code:"1.2",  kind:"rect", x:1047.9, y:138.4, w:137.9, h:72.7  },
+  { code:"1.3",  kind:"rect", x:1047.3, y:213.6, w:137.9, h:72.7  },
+  { code:"1.4",  kind:"rect", x:1047.3, y:289.1, w:137.9, h:72.7  },
+  { code:"1.5",  kind:"rect", x:1047.4, y:364.5, w:137.9, h:72.7  },
+  { code:"1.6",  kind:"rect", x:1047.4, y:440,   w:137.9, h:72.7  },
+  { code:"1.7",  kind:"rect", x:1047.4, y:515.5, w:137.9, h:72.7  },
+  { code:"1.8",  kind:"rect", x:814.5,  y:522.9, w:137.9, h:65.3  },
+  { code:"1.9",  kind:"rect", x:814.5,  y:455,   w:137.9, h:65.3  },
+  { code:"1.10", kind:"rect", x:814.4,  y:387,   w:137.9, h:65.3  },
+  { code:"1.11", kind:"rect", x:814.4,  y:319.1, w:137.9, h:65.3  },
+  { code:"1.12", kind:"path", cx:870, cy:240, d:"M952.3,280.1v22.7c0,7.5-6.1,13.6-13.6,13.6h-110.6c-7.5,0-13.6-6.1-13.6-13.6v-109.8c0-7.5,6.1-13.6,13.6-13.6h73.2c7.5,0,13.6,6.1,13.6,13.6v73.5h23.8c7.5,0,13.6,6.1,13.6,13.6h0Z" },
+  { code:"1.13", kind:"rect", x:611.8,  y:438.9, w:107.8, h:62.2  },
+  { code:"1.14", kind:"rect", x:611.8,  y:374,   w:107.8, h:62.2  },
+  { code:"1.15", kind:"rect", x:611.8,  y:309.1, w:107.8, h:62.2  },
+  { code:"1.16", kind:"rect", x:611.7,  y:244.2, w:107.8, h:62.2  },
+  { code:"1.17", kind:"rect", x:611.8,  y:179.3, w:107.8, h:62.2  },
+  { code:"1.18", kind:"rect", x:282.2,  y:336.2, w:224,   h:98.8  },
+  { code:"1.19", kind:"rect", x:282.2,  y:267.6, w:117.9, h:65.9  },
+  { code:"1.20", kind:"rect", x:282.1,  y:199,   w:117.9, h:65.9  },
+  { code:"1.21", kind:"rect", x:281.9,  y:131.2, w:117.9, h:65.9  },
+  { code:"1.22", kind:"rect", x:282.2,  y:62.9,  w:117.9, h:65.9  },
+  { code:"1.23", kind:"rect", x:507.4,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.24", kind:"rect", x:575.5,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.25", kind:"rect", x:643.5,  y:697.8, w:65.3,  h:137.9 },
+  { code:"1.26", kind:"rect", x:711.6,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.27", kind:"rect", x:779.6,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.28", kind:"rect", x:847.6,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.29", kind:"rect", x:915.7,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.30", kind:"rect", x:983.8,  y:697.9, w:65.3,  h:137.9 },
+  { code:"1.31", kind:"rect", x:1051.8, y:697.9, w:65.3,  h:137.9 },
+  { code:"1.32", kind:"rect", x:1119.9, y:697.9, w:65.3,  h:137.9 },
+];
+
+const G6_V2: G6Shape[] = [
+  { code:"2.1",  kind:"rect", x:1047.9, y:63.1,  w:137.9, h:82.6  },
+  { code:"2.2",  kind:"rect", x:1048,   y:148.6, w:137.9, h:60.4  },
+  { code:"2.3",  kind:"rect", x:1047.4, y:211.5, w:137.9, h:60.4  },
+  { code:"2.4",  kind:"rect", x:1047.3, y:274.5, w:137.9, h:61.2  },
+  { code:"2.5",  kind:"rect", x:1047.2, y:337.8, w:137.9, h:61    },
+  { code:"2.6",  kind:"rect", x:1047.4, y:401,   w:137.9, h:60.8  },
+  { code:"2.7",  kind:"rect", x:1047.5, y:464.1, w:137.9, h:60.7  },
+  { code:"2.8",  kind:"rect", x:1047.4, y:527.4, w:137.9, h:60.7  },
+  { code:"2.9",  kind:"rect", x:814.5,  y:522.9, w:137.6, h:65.3  },
+  { code:"2.10", kind:"rect", x:884.6,  y:454.9, w:67.6,  h:65.3  },
+  { code:"2.11", kind:"rect", x:814.2,  y:455,   w:67.6,  h:65.3  },
+  { code:"2.12", kind:"rect", x:885.2,  y:386.8, w:67.6,  h:65.3  },
+  { code:"2.13", kind:"rect", x:814.9,  y:387.1, w:67.6,  h:65.3  },
+  { code:"2.14", kind:"rect", x:884.3,  y:319,   w:67.6,  h:65.3  },
+  { code:"2.15", kind:"rect", x:814.3,  y:319,   w:67.6,  h:65.3  },
+  { code:"2.16", kind:"path", cx:870, cy:240, d:"M952.3,280.1v22.7c0,7.5-6.1,13.6-13.6,13.6h-110.6c-7.5,0-13.6-6.1-13.6-13.6v-109.8c0-7.5,6.1-13.6,13.6-13.6h73.2c7.5,0,13.6,6.1,13.6,13.6v73.5h23.8c7.5,0,13.6,6.1,13.6,13.6h0Z" },
+  { code:"2.17", kind:"rect", x:611.8,  y:449.4, w:107.8, h:51.7  },
+  { code:"2.18", kind:"rect", x:611.8,  y:395.3, w:107.8, h:51.9  },
+  { code:"2.19", kind:"rect", x:611.8,  y:341.3, w:107.8, h:52    },
+  { code:"2.20", kind:"rect", x:611.7,  y:287.5, w:107.8, h:51.5  },
+  { code:"2.21", kind:"rect", x:611.8,  y:233.4, w:107.8, h:51.7  },
+  { code:"2.22", kind:"rect", x:611.9,  y:179.3, w:107.8, h:51.7  },
+  { code:"2.23", kind:"rect", x:282.2,  y:336.2, w:224,   h:98.8  },
+  { code:"2.24", kind:"rect", x:282.2,  y:267.6, w:117.9, h:65.9  },
+  { code:"2.25", kind:"rect", x:282.1,  y:199,   w:117.9, h:65.9  },
+  { code:"2.26", kind:"rect", x:281.9,  y:131.2, w:117.9, h:65.9  },
+  { code:"2.27", kind:"rect", x:282.2,  y:62.9,  w:117.9, h:65.9  },
+  { code:"2.28", kind:"rect", x:507.4,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.29", kind:"rect", x:575.5,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.30", kind:"rect", x:643.5,  y:697.8, w:65.3,  h:137.9 },
+  { code:"2.31", kind:"rect", x:711.6,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.32", kind:"rect", x:779.6,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.33", kind:"rect", x:847.6,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.34", kind:"rect", x:915.7,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.35", kind:"rect", x:983.8,  y:697.9, w:65.3,  h:137.9 },
+  { code:"2.36", kind:"rect", x:1051.8, y:697.9, w:65.3,  h:137.9 },
+  { code:"2.37", kind:"rect", x:1119.9, y:697.9, w:65.3,  h:137.9 },
+];
+
+type G6Floor = "BG" | "V1" | "V2";
+const G6_FLOORS: { key: G6Floor; label: string; shapes: G6Shape[] }[] = [
+  { key: "BG", label: "Begane grond", shapes: G6_BG },
+  { key: "V1", label: "1e verdieping", shapes: G6_V1 },
+  { key: "V2", label: "2e verdieping", shapes: G6_V2 },
+];
+
+function SixthGridFloorPlan({ units, pinnedCounts, maxCount, pinnedLeads, onUnitClick }: {
+  units: DashboardUnit[]; pinnedCounts: Record<number, number>; maxCount: number;
+  pinnedLeads?: Record<number, PinnedLeadEntry[]>; onUnitClick?: (unit: DashboardUnit, leads: PinnedLeadEntry[]) => void;
+}) {
+  const [activeFloor, setActiveFloor] = useState<G6Floor>("BG");
+
+  // Bouw code → unit map: "U-0-0.1" → key "0.1"
+  const unitByCode = useMemo(() => {
+    const m = new Map<string, DashboardUnit>();
+    for (const u of units) {
+      const parts = u.code.split("-");
+      const code = parts.length >= 3 ? parts.slice(2).join("-") : parts[parts.length - 1];
+      if (code) m.set(code, u);
+    }
+    return m;
+  }, [units]);
+
+  const floorData = G6_FLOORS.find((f) => f.key === activeFloor)!;
+
+  return (
+    <div>
+      {/* Verdieping tabs */}
+      <div className="flex gap-2 mb-3">
+        {G6_FLOORS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setActiveFloor(f.key)}
+            className="px-3 py-1 rounded text-xs font-semibold border transition-colors"
+            style={activeFloor === f.key
+              ? { background: "rgba(237,255,0,0.12)", color: "#edff00", borderColor: "rgba(237,255,0,0.3)" }
+              : { background: "transparent", color: "#6b7280", borderColor: "rgba(255,255,255,0.08)" }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <svg
+        viewBox="260 45 940 815"
+        style={{ width: "100%", display: "block", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.15)", background: "#0f172a" }}
+        aria-label={`6th Grid plattegrond — ${floorData.label}`}
+      >
+        {floorData.shapes.map((shape) => {
+          const unit = unitByCode.get(shape.code);
+          const count = unit ? (pinnedCounts[Number(unit.id)] ?? 0) : 0;
+          const s = getCellStyle(count, maxCount, unit?.status ?? "beschikbaar");
+          const isSold = unit?.status === "verkocht";
+          const isReserved = unit?.status === "gereserveerd";
+          const isComingSoon = unit?.status === "coming_soon";
+          const subLabel = isComingSoon ? "binnenkort" : isSold ? "✓ verkocht" : isReserved ? "◷ reserv." : count > 0 ? `${count}×` : "—";
+          const clickable = unit && !isComingSoon;
+
+          let cx: number, cy: number, dotX: number, dotY: number;
+          if (shape.kind === "rect") {
+            cx = shape.x + shape.w / 2; cy = shape.y + shape.h / 2;
+            dotX = shape.x + shape.w - 10; dotY = shape.y + 10;
+          } else {
+            cx = shape.cx; cy = shape.cy;
+            dotX = cx + 30; dotY = cy - 30;
+          }
+
+          const minDim = shape.kind === "rect" ? Math.min(shape.w, shape.h) : 65;
+          const codeFontSize = Math.min(18, Math.max(10, minDim / 3.5));
+          const subFontSize = Math.min(11, Math.max(8, minDim / 6));
+
+          return (
+            <g
+              key={shape.code}
+              style={{ cursor: clickable ? "pointer" : "default" }}
+              onClick={() => { if (clickable && onUnitClick) onUnitClick(unit!, pinnedLeads?.[Number(unit!.id)] ?? []); }}
+            >
+              {shape.kind === "rect"
+                ? <rect x={shape.x} y={shape.y} width={shape.w} height={shape.h} rx="10" ry="10"
+                    fill={s.bg} stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" opacity={s.opacity} />
+                : <path d={shape.d} fill={s.bg} stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" opacity={s.opacity} />}
+              <text x={cx} y={cy - codeFontSize * 0.6} textAnchor="middle" dominantBaseline="middle"
+                fill={s.numColor} fontSize={codeFontSize} fontWeight="700" fontFamily="system-ui,sans-serif"
+                style={{ pointerEvents: "none", userSelect: "none" }}>
+                {shape.code}
+              </text>
+              <text x={cx} y={cy + subFontSize * 1.2} textAnchor="middle" dominantBaseline="middle"
+                fill={s.countColor} fontSize={subFontSize} fontWeight="600" fontFamily="system-ui,sans-serif"
+                style={{ pointerEvents: "none", userSelect: "none" }}>
+                {subLabel}
+              </text>
+              {(isSold || isReserved) && (
+                <circle cx={dotX} cy={dotY} r="5" fill={isSold ? "#34d399" : "#facc15"} stroke={isSold ? "#6ee7b7" : "#fef08a"} strokeWidth="1.5" />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function LegendItem({ bg, border, label }: { bg: string; border: string; label: string }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -386,11 +608,12 @@ export function FloorPlanHeatmap({ units, pinnedCounts, pinnedLeads, projectSlug
 
   if (sorted.length === 0) return null;
 
-  const isPaveri   = projectSlug === "depaveri";
-  const isElster11 = projectSlug === "elster11";
+  const isPaveri    = projectSlug === "depaveri";
+  const isElster11  = projectSlug === "elster11";
+  const isSixthGrid = projectSlug === "6th-grid";
   const columns = sorted.length <= 7 ? sorted.length : 7;
   const rows: DashboardUnit[][] = [];
-  if (!isPaveri && !isElster11) {
+  if (!isPaveri && !isElster11 && !isSixthGrid) {
     for (let i = 0; i < sorted.length; i += columns) {
       rows.push(sorted.slice(i, i + columns));
     }
@@ -416,6 +639,8 @@ export function FloorPlanHeatmap({ units, pinnedCounts, pinnedLeads, projectSlug
         <PaveriFloorPlan unitMap={unitMap} pinnedCounts={pinnedCounts} maxCount={maxCount} pinnedLeads={pinnedLeads} onUnitClick={handleUnitClick} />
       ) : isElster11 ? (
         <Elster11FloorPlan unitMap={unitMap} pinnedCounts={pinnedCounts} maxCount={maxCount} pinnedLeads={pinnedLeads} onUnitClick={handleUnitClick} />
+      ) : isSixthGrid ? (
+        <SixthGridFloorPlan units={sorted} pinnedCounts={pinnedCounts} maxCount={maxCount} pinnedLeads={pinnedLeads} onUnitClick={handleUnitClick} />
       ) : (
         <div className="rounded-lg overflow-hidden" style={{ border: "2px solid rgba(255,255,255,0.15)", display: "inline-grid", gridTemplateRows: `repeat(${rows.length}, 1fr)`, width: "100%" }}>
           {rows.map((row, rowIdx) => (

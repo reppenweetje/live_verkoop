@@ -43,11 +43,16 @@ export function getProjectConfig(slug: string): ProjectConfig {
 }
 
 /**
- * Transformeert een Directus unit-code (bv. "U-1") naar de project-specifieke weergave (bv. "BOX-1").
- * Werkt ook als het broncode-prefix al klopt.
+ * Transformeert een Directus unit-code naar de project-specifieke weergave.
+ * Voorbeelden:
+ *   "U-1"     → "U-1"  (standaard)
+ *   "U-0-0.1" → "BOX-0.1"  (6th Grid: neemt het laatste segment na de prefix)
  */
 export function formatUnitCode(code: string, config: ProjectConfig): string {
-  // Haal het getal eruit (bijv. "U-14" → "14", "U14" → "14")
-  const num = code.replace(/^[A-Za-z]+-?/i, "");
+  // Verwijder het letter-prefix (bv. "U-")
+  const withoutPrefix = code.replace(/^[A-Za-z]+-?/i, "");
+  // Als er nog een '-' in zit (bv. "0-0.1"), neem alleen het deel na de eerste '-'
+  const segments = withoutPrefix.split("-");
+  const num = segments.length > 1 ? segments.slice(1).join("-") : segments[0];
   return `${config.codePrefix}-${num}`;
 }
