@@ -40,62 +40,71 @@ export async function GET(request: Request) {
   const heartbeatLeads = getOnlineLeads(projectSlug, 2 * 60 * 1000);
   const heartbeatIds = new Set(heartbeatLeads.map((l) => l.id));
 
-  // --- Bron 2: Directus — recente favoriet/profiel wijzigingen (30 min) ---
+  // --- Bron 2: Directus — recente pinned_units activiteit voor DIT project (30 min) ---
+  // We gebruiken pinned_units i.p.v. customers.updated_at zodat de activiteit
+  // gegarandeerd project-specifiek is en niet lekt naar andere projecten.
   const since30 = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
   let directusLeads: ActiveLead[] = [];
-  try {
-    const sinceEnc = encodeURIComponent(since30);
-    const qs = [
-      `filter%5B_or%5D%5B0%5D%5Bpinned_changed_at%5D%5B_gte%5D=${sinceEnc}`,
-      `filter%5B_or%5D%5B1%5D%5Bupdated_at%5D%5B_gte%5D=${sinceEnc}`,
-      `fields=id,first_name,last_name,email,pinned_changed_at,updated_at,tags,favourites`,
-      `limit=100`,
-      `sort=-updated_at`,
-    ].join("&");
+  if (directusProjectId) {
+    try {
+      const since30Enc = encodeURIComponent(since30);
+      // Haal recente pins op voor dit specifieke project
+      const pinQs = [
+        `filter%5Bproject_id%5D%5B_eq%5D=${directusProjectId}`,
+        `filter%5Bcreated_at%5D%5B_gte%5D=${since30Enc}`,
+        `fields=customer_id,created_at`,
+        `limit=200`,
+        `sort=-created_at`,
+      ].join("&");
 
-    const res = await fetch(`${DIRECTUS_URL}/items/customers?${qs}`, {
-      headers: { Authorization: `Bearer ${DIRECTUS_TOKEN}` },
-      cache: "no-store",
-    });
+      const pinRes = await fetch(`${DIRECTUS_URL}/items/pinned_units?${pinQs}`, {
+        headers: { Authorization: `Bearer ${DIRECTUS_TOKEN}` },
+        cache: "no-store",
+      });
 
-    if (res.ok) {
-      const json = await res.json();
-      const customers: Array<{
-        id: number;
-        first_name: string;
-        last_name: string;
-        email: string;
-        pinned_changed_at: string | null;
-        updated_at: string | null;
-        tags: string[];
-        favourites: string[] | null;
-      }> = json.data ?? [];
+      if (pinRes.ok) {
+        const pinJson = await pinRes.json();
+        const pins: Array<{ customer_id: number; created_at: string }> = pinJson.data ?? [];
 
-      directusLeads = customers
-        .filter((c) => !isInternalEmail(c.email))
-        .filter((c) => {
-          if (!projectSlug) return true;
-          return Array.isArray(c.tags) && c.tags.includes(projectSlug);
-        })
-        .map((c): ActiveLead => {
-          const ts1 = c.pinned_changed_at ? new Date(c.pinned_changed_at).getTime() : 0;
-          const ts2 = c.updated_at ? new Date(c.updated_at).getTime() : 0;
-          const lastActiveAt = ts1 >= ts2 ? (c.pinned_changed_at ?? c.updated_at ?? "") : (c.updated_at ?? "");
-          return {
-            id: c.id,
-            firstName: c.first_name ?? "",
-            lastName: c.last_name ?? "",
-            email: c.email,
-            lastActiveAt,
-            favouriteCount: Array.isArray(c.favourites) ? c.favourites.length : 0,
-            tags: c.tags ?? [],
-            source: "directus",
-          };
-        });
+        // Meest recente pin-timestamp per klant
+        const pinMap = new Map<number, string>();
+        for (const p of pins) {
+          const existing = pinMap.get(p.customer_id);
+          if (!existing || p.created_at > existing) {
+            pinMap.set(p.customer_id, p.created_at);
+          }
+        }
+
+        if (pinMap.size > 0) {
+          const customerIds = Array.from(pinMap.keys()).join(",");
+          const custRes = await fetch(
+            `${DIRECTUS_URL}/items/customers?filter%5Bid%5D%5B_in%5D=${customerIds}&fields=id,first_name,last_name,email,tags,favourites&limit=200`,
+            { headers: { Authorization: `Bearer ${DIRECTUS_TOKEN}` }, cache: "no-store" }
+          );
+
+          if (custRes.ok) {
+            const custJson = await custRes.json();
+            for (const c of custJson.data ?? []) {
+              if (isInternalEmail(c.email)) continue;
+              const lastActiveAt = pinMap.get(c.id) ?? since30;
+              directusLeads.push({
+                id: c.id,
+                firstName: c.first_name ?? "",
+                lastName: c.last_name ?? "",
+                email: c.email,
+                lastActiveAt,
+                favouriteCount: Array.isArray(c.favourites) ? c.favourites.length : 0,
+                tags: c.tags ?? [],
+                source: "directus",
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("active-leads pinned_units error:", err);
     }
-  } catch (err) {
-    console.error("active-leads directus error:", err);
   }
 
   // --- Bron 3: Units met recente unit-actie (reservering, aankoop, annulering) — 5 min window ---
