@@ -45,6 +45,9 @@ export interface Milestone {
 export interface TimelineData {
   milestones: Milestone[];
   events: SaleEvent[];
+  totalSellable: number;
+  soldCount: number;
+  reservedCount: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -229,7 +232,11 @@ export async function GET(req: NextRequest) {
     // Nieuwste eerst
     events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    return NextResponse.json({ milestones, events } satisfies TimelineData);
+    const totalSellable = units.filter((u) => u.status !== "coming_soon").length;
+    const soldCount = units.filter((u) => u.status === "verkocht").length;
+    const reservedCount = units.filter((u) => u.status === "gereserveerd").length;
+
+    return NextResponse.json({ milestones, events, totalSellable, soldCount, reservedCount } satisfies TimelineData);
   } catch (err) {
     console.error("Timeline API error:", err);
     return NextResponse.json({ error: "Kon timeline niet ophalen" }, { status: 500 });

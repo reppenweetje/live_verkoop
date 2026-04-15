@@ -138,6 +138,261 @@ interface Props {
   initialData: AnalyticsData;
 }
 
+// ─── Horizontal timeline component ───────────────────────────────────────────
+
+const MIN_SPACE_PCT = 5;   // minimum % gap between milestone labels
+const USABLE_MAX_PCT = 93; // leave room for right-edge undated milestone
+
+function applyMinSpacing(rawPcts: number[]): number[] {
+  if (rawPcts.length === 0) return [];
+  const positions = [...rawPcts];
+  // Forward pass: push right if too close
+  for (let i = 1; i < positions.length; i++) {
+    if (positions[i] - positions[i - 1] < MIN_SPACE_PCT) {
+      positions[i] = positions[i - 1] + MIN_SPACE_PCT;
+    }
+  }
+  // If last item > USABLE_MAX, scale everything proportionally
+  const last = positions[positions.length - 1];
+  if (last > USABLE_MAX_PCT) {
+    const scale = USABLE_MAX_PCT / last;
+    return positions.map((p) => p * scale);
+  }
+  return positions;
+}
+
+function HorizontalTimeline({
+  allMilestones,
+  totalSellable,
+  soldCount,
+  reservedCount,
+}: {
+  allMilestones: (Milestone & { _customIcon?: string })[];
+  totalSellable: number;
+  soldCount: number;
+  reservedCount: number;
+}) {
+  const datedItems = allMilestones
+    .filter((m) => m.date)
+    .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+  const undatedItems = allMilestones.filter((m) => !m.date);
+
+  if (datedItems.length === 0) return null;
+
+  const minTs = new Date(datedItems[0].date!).getTime();
+  const maxDatedTs = new Date(datedItems[datedItems.length - 1].date!).getTime();
+  // Buffer: at least 30 days or 20% of the range after the last dated milestone
+  const bufferMs = Math.max((maxDatedTs - minTs) * 0.2, 30 * 24 * 60 * 60 * 1000);
+  const endTs = maxDatedTs + bufferMs;
+  const rangeMs = endTs - minTs;
+
+  const rawPcts = datedItems.map((m) =>
+    ((new Date(m.date!).getTime() - minTs) / rangeMs) * USABLE_MAX_PCT
+  );
+  const positions = applyMinSpacing(rawPcts);
+
+  const soldPct = totalSellable > 0 ? (soldCount / totalSellable) * 100 : 0;
+  const reservedPct = totalSellable > 0 ? (reservedCount / totalSellable) * 100 : 0;
+  const LINE_Y = 110; // px from top of the timeline container
+
+  return (
+    <div className="space-y-8">
+      {/* ── Milestone timeline ── */}
+      <div className="relative overflow-visible" style={{ height: `${LINE_Y * 2 + 2}px` }}>
+        {/* Horizontal line */}
+        <div
+          className="absolute left-0 right-0 bg-blue-700/40"
+          style={{ top: `${LINE_Y}px`, height: "2px" }}
+        />
+        {/* Right cap on the line */}
+        <div
+          className="absolute right-0 bg-blue-600/60 rounded-full"
+          style={{ top: `${LINE_Y - 3}px`, width: "8px", height: "8px" }}
+        />
+
+        {/* Dated milestones */}
+        {datedItems.map((m, idx) => {
+          const pct = positions[idx];
+          const above = idx % 2 === 0;
+          const Icon = (m._customIcon ? MILESTONE_ICONS[m._customIcon] : MILESTONE_ICONS[m.key]) ?? CheckCircle;
+          const isFirst = idx === 0;
+          const isLast = idx === datedItems.length - 1;
+
+          // Align label: leftmost items → left-align, rightmost → right-align, rest → center
+          const labelAlign = pct < 15 ? "items-start" : pct > 82 ? "items-end" : "items-center";
+          const textAlign = pct < 15 ? "text-left" : pct > 82 ? "text-right" : "text-center";
+
+          return (
+            <div
+              key={m.key}
+              className="absolute"
+              style={{
+                left: `${pct}%`,
+                top: `${LINE_Y}px`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              {/* Dot */}
+              <div
+                className={cn(
+                  "absolute rounded-full z-10",
+                  m.completed
+                    ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.45)]"
+                    : "border-2 border-dashed border-blue-600/60 bg-[#0a1628]"
+                )}
+                style={{
+                  width: isFirst || isLast ? "14px" : "11px",
+                  height: isFirst || isLast ? "14px" : "11px",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+
+              {above ? (
+                /* Label above the line */
+                <div
+                  className={cn("absolute flex flex-col gap-0", labelAlign)}
+                  style={{
+                    bottom: "calc(50% + 10px)",
+                    left: "50%",
+                    transform: pct < 15 ? "translateX(-4px)" : pct > 82 ? "translateX(calc(-100% + 4px))" : "translateX(-50%)",
+                    paddingBottom: "6px",
+                  }}
+                >
+                  <div className={cn("mb-1", textAlign)} style={{ width: "88px" }}>
+                    <p className={cn("text-[10.5px] font-semibold leading-snug", m.completed ? "text-white" : "text-blue-700/60")}>
+                      {m.label}
+                    </p>
+                    <p className="text-[9.5px] text-gray-500 tabular-nums mt-0.5">
+                      {format(parseISO(m.date!), "d MMM ''yy", { locale: nl })}
+                    </p>
+                    {m.context && (
+                      <p className="text-[8.5px] text-gray-600 mt-0.5 leading-tight">{m.context}</p>
+                    )}
+                  </div>
+                  {/* Connector */}
+                  <div className="w-px bg-blue-700/30 self-center" style={{ height: "14px" }} />
+                </div>
+              ) : (
+                /* Label below the line */
+                <div
+                  className={cn("absolute flex flex-col gap-0", labelAlign)}
+                  style={{
+                    top: "calc(50% + 10px)",
+                    left: "50%",
+                    transform: pct < 15 ? "translateX(-4px)" : pct > 82 ? "translateX(calc(-100% + 4px))" : "translateX(-50%)",
+                    paddingTop: "6px",
+                  }}
+                >
+                  {/* Connector */}
+                  <div className="w-px bg-blue-700/30 self-center mb-1" style={{ height: "14px" }} />
+                  <div className={cn(textAlign)} style={{ width: "88px" }}>
+                    <p className={cn("text-[10.5px] font-semibold leading-snug", m.completed ? "text-white" : "text-blue-700/60")}>
+                      {m.label}
+                    </p>
+                    <p className="text-[9.5px] text-gray-500 tabular-nums mt-0.5">
+                      {format(parseISO(m.date!), "d MMM ''yy", { locale: nl })}
+                    </p>
+                    {m.context && (
+                      <p className="text-[8.5px] text-gray-600 mt-0.5 leading-tight">{m.context}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Undated milestones at far right (e.g., Volledig uitverkocht) */}
+        {undatedItems.map((m, idx) => (
+          <div
+            key={m.key}
+            className="absolute"
+            style={{ right: "0", top: `${LINE_Y}px`, transform: "translateX(50%)" }}
+          >
+            {/* Dashed target circle */}
+            <div
+              className="absolute border-2 border-dashed border-blue-600/50 rounded-full"
+              style={{ width: "18px", height: "18px", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+            />
+            {/* Label above */}
+            <div
+              className="absolute flex flex-col items-end"
+              style={{ bottom: "calc(50% + 14px)", right: "0", paddingBottom: "6px" }}
+            >
+              <div className="text-right mb-1" style={{ width: "92px" }}>
+                <p className="text-[10.5px] font-semibold text-blue-700/60 leading-snug">{m.label}</p>
+                <p className="text-[9px] text-blue-800 mt-0.5">nog niet</p>
+              </div>
+              <div className="w-px bg-blue-700/25 self-center" style={{ height: "14px" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Verkoopvoortgang balk ── */}
+      {totalSellable > 0 && (
+        <div className="space-y-2.5">
+          {/* Labels */}
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center gap-5">
+              {soldCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-400/80 flex-shrink-0" />
+                  {soldCount} verkocht · {Math.round(soldPct)}%
+                </span>
+              )}
+              {reservedCount > 0 && (
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-400/60 flex-shrink-0" />
+                  {reservedCount} gereserveerd · {Math.round(reservedPct)}%
+                </span>
+              )}
+            </div>
+            <span className="flex items-center gap-1 text-blue-700/80">
+              <Trophy size={10} />
+              {totalSellable} units totaal
+            </span>
+          </div>
+
+          {/* Bar */}
+          <div className="relative h-5 rounded-lg bg-blue-900/40 border border-blue-800/30 overflow-hidden">
+            {soldPct > 0 && (
+              <div
+                className="absolute left-0 top-0 h-full bg-emerald-400/75 transition-all duration-700"
+                style={{ width: `${soldPct}%` }}
+              />
+            )}
+            {reservedPct > 0 && (
+              <div
+                className="absolute top-0 h-full bg-yellow-400/55 transition-all duration-700"
+                style={{ left: `${soldPct}%`, width: `${reservedPct}%` }}
+              />
+            )}
+            {soldPct > 12 && (
+              <span
+                className="absolute top-0 h-full flex items-center text-[10px] font-bold text-emerald-900/80 pl-2"
+              >
+                {Math.round(soldPct)}%
+              </span>
+            )}
+          </div>
+
+          {/* Axis labels */}
+          <div className="flex justify-between text-[10px] text-blue-800/70">
+            <span>Start</span>
+            <span className="flex items-center gap-1">
+              <Trophy size={9} className="text-yellow-400/40" />
+              Volledig uitverkocht
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Timeline settings ────────────────────────────────────────────────────────
 
 export interface CustomMilestone {
@@ -808,7 +1063,7 @@ export default function AnalyticsClient({ projectId, projectName, siteDomain, in
             const visibleStandard = timelineData.milestones.filter(
               (m) => !timelineSettings.hiddenMilestones.includes(m.key)
             );
-            const customAsStandard: Milestone[] = timelineSettings.customMilestones.map((c) => ({
+            const customAsStandard = timelineSettings.customMilestones.map((c) => ({
               key: `custom-${c.id}`,
               label: c.label,
               date: c.date,
@@ -824,52 +1079,46 @@ export default function AnalyticsClient({ projectId, projectName, siteDomain, in
             });
 
             return (
-              <div className="grid gap-6 lg:grid-cols-2">
-                {/* Mijlpalen */}
+              <div className="space-y-6">
+                {/* Horizontale tijdlijn + voortgangsbalk */}
                 <Card>
-                  <h3 className="text-base font-bold text-white mb-6 flex items-center gap-2">
-                    <CalendarClock size={16} className="text-yellow-400" /> Mijlpalen
-                    {timelineSettings.customMilestones.length > 0 && (
-                      <span className="text-xs font-normal text-gray-500 ml-auto">
-                        +{timelineSettings.customMilestones.length} aangepast
-                      </span>
-                    )}
-                  </h3>
-                  <div className="relative">
-                    <div className="absolute left-4 top-0 bottom-0 w-px bg-blue-800/40" />
-                    <div className="space-y-0">
-                      {allMilestones.map((m) => {
-                        const customIcon = (m as Milestone & { _customIcon?: string })._customIcon;
-                        return (
-                          <MilestoneRow
-                            key={m.key}
-                            milestone={m}
-                            iconOverride={customIcon}
-                          />
-                        );
-                      })}
-                      {allMilestones.length === 0 && (
-                        <p className="text-sm text-gray-600 py-4 pl-12">
-                          Alle mijlpalen zijn verborgen. Pas de instellingen aan.
-                        </p>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <CalendarClock size={16} className="text-yellow-400" /> Mijlpalen
+                      {timelineSettings.customMilestones.length > 0 && (
+                        <span className="text-xs font-normal text-gray-500">
+                          +{timelineSettings.customMilestones.length} aangepast
+                        </span>
                       )}
-                    </div>
+                    </h3>
                   </div>
+                  {allMilestones.length === 0 ? (
+                    <p className="text-sm text-gray-600 py-4">
+                      Alle mijlpalen zijn verborgen. Pas de instellingen aan.
+                    </p>
+                  ) : (
+                    <HorizontalTimeline
+                      allMilestones={allMilestones}
+                      totalSellable={timelineData.totalSellable}
+                      soldCount={timelineData.soldCount}
+                      reservedCount={timelineData.reservedCount}
+                    />
+                  )}
                 </Card>
 
-                {/* Verkoopgebeurtenissen */}
+                {/* Verkoopgebeurtenissen — full width */}
                 <Card>
                   <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
                     <Star size={16} className="text-yellow-400" /> Verkopen &amp; reserveringen
                   </h3>
                   {timelineData.events.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
                       <Star size={28} className="text-blue-800 mb-3" />
                       <p className="text-sm text-gray-600">Nog geen verkopen of reserveringen</p>
                       <p className="text-xs text-gray-700 mt-1">Ze verschijnen hier zodra het verkoopmoment start</p>
                     </div>
                   ) : (
-                    <div className="max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-y divide-blue-800/20 sm:divide-y-0">
                       {timelineData.events.map((ev, i) => (
                         <EventRow key={`${ev.unitCode}-${ev.type}-${i}`} event={ev} projectId={projectId} />
                       ))}
