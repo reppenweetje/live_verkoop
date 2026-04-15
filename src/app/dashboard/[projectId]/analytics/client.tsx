@@ -10,7 +10,7 @@ import {
   CheckCircle, Trophy, UserPlus, CalendarClock, Settings, X, Plus, Trash2,
   Flag, Megaphone, PartyPopper, Milestone as MilestoneIcon,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, eachMonthOfInterval, startOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDuration, PERIODS } from "@/lib/plausible";
@@ -218,6 +218,19 @@ function HorizontalTimeline({
     return "text-center";
   }
 
+  // ── Month axis ────────────────────────────────────────────────────────────
+  const allMonths = eachMonthOfInterval({
+    start: startOfMonth(new Date(minTs)),
+    end:   new Date(minTs + rangeMs),
+  }).map((d, i, arr) => {
+    const pct    = ((d.getTime() - minTs) / rangeMs) * 100;
+    const isNew  = i === 0 || d.getFullYear() !== arr[i - 1].getFullYear();
+    const label  = isNew
+      ? format(d, "MMM ''yy", { locale: nl })
+      : format(d, "MMM",       { locale: nl });
+    return { pct, label, isNew };
+  }).filter((m) => m.pct >= 0 && m.pct <= 100);
+
   return (
     <div className="space-y-6">
       {/* ── Timeline band ──────────────────────────────────────────────────── */}
@@ -338,6 +351,40 @@ function HorizontalTimeline({
               </p>
               <div className="mt-2 w-px bg-blue-700/20 self-center" style={{ height: `${CONN_H}px` }} />
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Maand-as ─────────────────────────────────────────────────────── */}
+      <div className="relative" style={{ height: "32px", marginTop: "-4px" }}>
+        {/* Subtiele verbindingslijn met de tijdlijn erboven */}
+        <div className="absolute left-0 right-0 top-0 h-px" style={{ background: "rgba(59,130,246,0.15)" }} />
+
+        {allMonths.map(({ pct, label, isNew }) => (
+          <div
+            key={label + pct}
+            className="absolute top-0"
+            style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
+          >
+            {/* Tick */}
+            <div
+              className="mx-auto"
+              style={{
+                width: "1px",
+                height: isNew ? "10px" : "6px",
+                background: isNew ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.5)",
+              }}
+            />
+            {/* Label */}
+            <p
+              className={cn(
+                "tabular-nums mt-1 whitespace-nowrap text-center",
+                isNew ? "text-gray-400 text-[10px] font-semibold" : "text-blue-800/70 text-[9.5px]"
+              )}
+              style={{ transform: "translateX(-50%)", position: "relative", left: "50%" }}
+            >
+              {label}
+            </p>
           </div>
         ))}
       </div>
