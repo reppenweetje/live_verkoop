@@ -140,25 +140,30 @@ interface Props {
 
 // ─── Horizontal timeline component ───────────────────────────────────────────
 
-const MIN_SPACE_PCT = 5;   // minimum % gap between milestone labels
-const USABLE_MAX_PCT = 93; // leave room for right-edge undated milestone
 
-function applyMinSpacing(rawPcts: number[]): number[] {
+// ─── Horizontal timeline component ───────────────────────────────────────────
+
+/**
+ * Spacing algorithm:
+ *  1. Forward pass – ensure MIN_GAP between consecutive positions.
+ *  2. If the last item exceeds USABLE_MAX, anchor it there and pull
+ *     neighbours back (backward pass), then forward-pass once more.
+ * This keeps labels readable while preserving relative order.
+ */
+function applyMinSpacing(rawPcts: number[], min: number, max: number): number[] {
   if (rawPcts.length === 0) return [];
-  const positions = [...rawPcts];
-  // Forward pass: push right if too close
-  for (let i = 1; i < positions.length; i++) {
-    if (positions[i] - positions[i - 1] < MIN_SPACE_PCT) {
-      positions[i] = positions[i - 1] + MIN_SPACE_PCT;
-    }
+  const p = [...rawPcts];
+  const n = p.length;
+  // Forward
+  for (let i = 1; i < n; i++) p[i] = Math.max(p[i], p[i - 1] + min);
+  // Compress from right if overflowing
+  if (p[n - 1] > max) {
+    p[n - 1] = max;
+    for (let i = n - 2; i >= 0; i--) p[i] = Math.min(p[i], p[i + 1] - min);
+    p[0] = Math.max(0, p[0]);
+    for (let i = 1; i < n; i++) p[i] = Math.max(p[i], p[i - 1] + min);
   }
-  // If last item > USABLE_MAX, scale everything proportionally
-  const last = positions[positions.length - 1];
-  if (last > USABLE_MAX_PCT) {
-    const scale = USABLE_MAX_PCT / last;
-    return positions.map((p) => p * scale);
-  }
-  return positions;
+  return p;
 }
 
 function HorizontalTimeline({
@@ -179,212 +184,217 @@ function HorizontalTimeline({
 
   if (datedItems.length === 0) return null;
 
-  const minTs = new Date(datedItems[0].date!).getTime();
+  const minTs      = new Date(datedItems[0].date!).getTime();
   const maxDatedTs = new Date(datedItems[datedItems.length - 1].date!).getTime();
-  // Buffer: at least 30 days or 20% of the range after the last dated milestone
-  const bufferMs = Math.max((maxDatedTs - minTs) * 0.2, 30 * 24 * 60 * 60 * 1000);
-  const endTs = maxDatedTs + bufferMs;
-  const rangeMs = endTs - minTs;
+  const bufferMs   = Math.max((maxDatedTs - minTs) * 0.22, 30 * 24 * 3600 * 1000);
+  const rangeMs    = maxDatedTs + bufferMs - minTs;
 
-  const rawPcts = datedItems.map((m) =>
-    ((new Date(m.date!).getTime() - minTs) / rangeMs) * USABLE_MAX_PCT
+  const USABLE  = undatedItems.length > 0 ? 86 : 96; // % of bar width for dated items
+  const MIN_GAP = 14; // % — wide enough so 90px-centred labels don't collide
+
+  const rawPcts  = datedItems.map((m) =>
+    ((new Date(m.date!).getTime() - minTs) / rangeMs) * USABLE
   );
-  const positions = applyMinSpacing(rawPcts);
+  const positions = applyMinSpacing(rawPcts, MIN_GAP, USABLE);
 
-  const soldPct = totalSellable > 0 ? (soldCount / totalSellable) * 100 : 0;
+  const soldPct     = totalSellable > 0 ? (soldCount     / totalSellable) * 100 : 0;
   const reservedPct = totalSellable > 0 ? (reservedCount / totalSellable) * 100 : 0;
-  const LINE_Y = 110; // px from top of the timeline container
+
+  // Geometry constants (px)
+  const LABEL_AREA = 105; // space above / below the line
+  const CONN_H     = 24;  // connector line height
+  const LBL_W      = 90;  // label box width
+  const LINE_Y     = LABEL_AREA; // y-coordinate of the timeline line
+
+  // Decide label horizontal anchor based on position
+  function tx(pct: number) {
+    if (pct < 10) return "translateX(-5%)";
+    if (pct > 84) return "translateX(-95%)";
+    return "translateX(-50%)";
+  }
+  function textAlign(pct: number): string {
+    if (pct < 10) return "text-left";
+    if (pct > 84) return "text-right";
+    return "text-center";
+  }
 
   return (
-    <div className="space-y-8">
-      {/* ── Milestone timeline ── */}
+    <div className="space-y-6">
+      {/* ── Timeline band ──────────────────────────────────────────────────── */}
       <div className="relative overflow-visible" style={{ height: `${LINE_Y * 2 + 2}px` }}>
-        {/* Horizontal line */}
+
+        {/* Horizontal rule */}
         <div
-          className="absolute left-0 right-0 bg-blue-700/40"
-          style={{ top: `${LINE_Y}px`, height: "2px" }}
-        />
-        {/* Right cap on the line */}
-        <div
-          className="absolute right-0 bg-blue-600/60 rounded-full"
-          style={{ top: `${LINE_Y - 3}px`, width: "8px", height: "8px" }}
+          className="absolute left-0 right-0"
+          style={{ top: `${LINE_Y}px`, height: "2px", background: "rgba(59,130,246,0.22)" }}
         />
 
         {/* Dated milestones */}
         {datedItems.map((m, idx) => {
-          const pct = positions[idx];
+          const pct   = positions[idx];
           const above = idx % 2 === 0;
-          const Icon = (m._customIcon ? MILESTONE_ICONS[m._customIcon] : MILESTONE_ICONS[m.key]) ?? CheckCircle;
-          const isFirst = idx === 0;
-          const isLast = idx === datedItems.length - 1;
+          const ta    = textAlign(pct);
+          const tX    = tx(pct);
 
-          // Align label: leftmost items → left-align, rightmost → right-align, rest → center
-          const labelAlign = pct < 15 ? "items-start" : pct > 82 ? "items-end" : "items-center";
-          const textAlign = pct < 15 ? "text-left" : pct > 82 ? "text-right" : "text-center";
+          const dot = (
+            <div
+              className={cn(
+                "rounded-full z-10 flex-shrink-0",
+                m.completed
+                  ? "bg-yellow-400 shadow-[0_0_14px_rgba(250,204,21,0.5)]"
+                  : "border-2 border-dashed border-blue-600/50 bg-[#0b1d40]"
+              )}
+              style={{ width: "13px", height: "13px" }}
+            />
+          );
+
+          const label = (
+            <div className={cn("flex flex-col gap-0", ta === "text-left" ? "items-start" : ta === "text-right" ? "items-end" : "items-center")} style={{ width: `${LBL_W}px` }}>
+              <p className={cn("text-[12px] font-semibold leading-tight w-full", ta, m.completed ? "text-white" : "text-blue-700/50")}>
+                {m.label}
+              </p>
+              <p className={cn("text-[10.5px] text-gray-500 tabular-nums mt-1 w-full", ta)}>
+                {format(parseISO(m.date!), "d MMM yyyy", { locale: nl })}
+              </p>
+              {m.context && (
+                <p className={cn("text-[9.5px] text-gray-600 mt-0.5 leading-tight w-full", ta)}>
+                  {m.context}
+                </p>
+              )}
+            </div>
+          );
+
+          const connector = (
+            <div className="w-px bg-blue-700/25 flex-shrink-0" style={{ height: `${CONN_H}px` }} />
+          );
 
           return (
             <div
               key={m.key}
               className="absolute"
-              style={{
-                left: `${pct}%`,
-                top: `${LINE_Y}px`,
-                transform: "translateX(-50%)",
-              }}
+              style={{ left: `${pct}%`, top: `${LINE_Y}px` }}
             >
-              {/* Dot */}
+              {/* Dot centred on the line */}
               <div
-                className={cn(
-                  "absolute rounded-full z-10",
-                  m.completed
-                    ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.45)]"
-                    : "border-2 border-dashed border-blue-600/60 bg-[#0a1628]"
-                )}
-                style={{
-                  width: isFirst || isLast ? "14px" : "11px",
-                  height: isFirst || isLast ? "14px" : "11px",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                }}
-              />
+                className="absolute"
+                style={{ left: "0", top: "0", transform: "translate(-50%, -50%)", zIndex: 10 }}
+              >
+                {dot}
+              </div>
 
               {above ? (
-                /* Label above the line */
+                /* Label above */
                 <div
-                  className={cn("absolute flex flex-col gap-0", labelAlign)}
+                  className="absolute flex flex-col items-center"
                   style={{
-                    bottom: "calc(50% + 10px)",
-                    left: "50%",
-                    transform: pct < 15 ? "translateX(-4px)" : pct > 82 ? "translateX(calc(-100% + 4px))" : "translateX(-50%)",
-                    paddingBottom: "6px",
+                    bottom: `${CONN_H + 10}px`,
+                    left: "0",
+                    transform: tX,
                   }}
                 >
-                  <div className={cn("mb-1", textAlign)} style={{ width: "88px" }}>
-                    <p className={cn("text-[10.5px] font-semibold leading-snug", m.completed ? "text-white" : "text-blue-700/60")}>
-                      {m.label}
-                    </p>
-                    <p className="text-[9.5px] text-gray-500 tabular-nums mt-0.5">
-                      {format(parseISO(m.date!), "d MMM ''yy", { locale: nl })}
-                    </p>
-                    {m.context && (
-                      <p className="text-[8.5px] text-gray-600 mt-0.5 leading-tight">{m.context}</p>
-                    )}
-                  </div>
-                  {/* Connector */}
-                  <div className="w-px bg-blue-700/30 self-center" style={{ height: "14px" }} />
+                  {label}
+                  <div className="mt-2">{connector}</div>
                 </div>
               ) : (
-                /* Label below the line */
+                /* Label below */
                 <div
-                  className={cn("absolute flex flex-col gap-0", labelAlign)}
+                  className="absolute flex flex-col items-center"
                   style={{
-                    top: "calc(50% + 10px)",
-                    left: "50%",
-                    transform: pct < 15 ? "translateX(-4px)" : pct > 82 ? "translateX(calc(-100% + 4px))" : "translateX(-50%)",
-                    paddingTop: "6px",
+                    top: `${CONN_H + 10}px`,
+                    left: "0",
+                    transform: tX,
                   }}
                 >
-                  {/* Connector */}
-                  <div className="w-px bg-blue-700/30 self-center mb-1" style={{ height: "14px" }} />
-                  <div className={cn(textAlign)} style={{ width: "88px" }}>
-                    <p className={cn("text-[10.5px] font-semibold leading-snug", m.completed ? "text-white" : "text-blue-700/60")}>
-                      {m.label}
-                    </p>
-                    <p className="text-[9.5px] text-gray-500 tabular-nums mt-0.5">
-                      {format(parseISO(m.date!), "d MMM ''yy", { locale: nl })}
-                    </p>
-                    {m.context && (
-                      <p className="text-[8.5px] text-gray-600 mt-0.5 leading-tight">{m.context}</p>
-                    )}
-                  </div>
+                  {connector}
+                  <div className="mt-2">{label}</div>
                 </div>
               )}
             </div>
           );
         })}
 
-        {/* Undated milestones at far right (e.g., Volledig uitverkocht) */}
-        {undatedItems.map((m, idx) => (
+        {/* Undated milestone — always at far right, label goes left */}
+        {undatedItems.map((m) => (
           <div
             key={m.key}
             className="absolute"
-            style={{ right: "0", top: `${LINE_Y}px`, transform: "translateX(50%)" }}
+            style={{ right: "0", top: `${LINE_Y}px` }}
           >
-            {/* Dashed target circle */}
+            {/* Dashed ring */}
             <div
-              className="absolute border-2 border-dashed border-blue-600/50 rounded-full"
-              style={{ width: "18px", height: "18px", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+              className="absolute rounded-full border-2 border-dashed border-yellow-400/25"
+              style={{ width: "18px", height: "18px", right: "0", top: "0", transform: "translate(50%, -50%)" }}
             />
-            {/* Label above */}
+            {/* Label above, right-aligned */}
             <div
               className="absolute flex flex-col items-end"
-              style={{ bottom: "calc(50% + 14px)", right: "0", paddingBottom: "6px" }}
+              style={{ bottom: `${CONN_H + 10}px`, right: "0", width: `${LBL_W}px` }}
             >
-              <div className="text-right mb-1" style={{ width: "92px" }}>
-                <p className="text-[10.5px] font-semibold text-blue-700/60 leading-snug">{m.label}</p>
-                <p className="text-[9px] text-blue-800 mt-0.5">nog niet</p>
-              </div>
-              <div className="w-px bg-blue-700/25 self-center" style={{ height: "14px" }} />
+              <p className="text-[12px] font-semibold text-yellow-400/40 text-right w-full leading-tight">
+                {m.label}
+              </p>
+              <p className="text-[10px] text-blue-800/70 mt-1 text-right w-full">
+                nog niet bereikt
+              </p>
+              <div className="mt-2 w-px bg-blue-700/20 self-center" style={{ height: `${CONN_H}px` }} />
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Verkoopvoortgang balk ── */}
+      {/* ── Verkoopvoortgang balk ─────────────────────────────────────────── */}
       {totalSellable > 0 && (
-        <div className="space-y-2.5">
-          {/* Labels */}
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-5">
-              {soldCount > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-400/80 flex-shrink-0" />
-                  {soldCount} verkocht · {Math.round(soldPct)}%
-                </span>
-              )}
+        <div className="space-y-3 pt-2">
+          {/* Legend row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6 text-xs text-gray-400">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-sm bg-emerald-400/80 flex-shrink-0" />
+                <strong className="text-white">{soldCount}</strong> verkocht &mdash; {Math.round(soldPct)}%
+              </span>
               {reservedCount > 0 && (
-                <span className="flex items-center gap-1.5 text-gray-600">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-400/60 flex-shrink-0" />
-                  {reservedCount} gereserveerd · {Math.round(reservedPct)}%
+                <span className="flex items-center gap-2 text-gray-500">
+                  <span className="w-3 h-3 rounded-sm bg-yellow-400/55 flex-shrink-0" />
+                  <strong className="text-gray-300">{reservedCount}</strong> gereserveerd &mdash; {Math.round(reservedPct)}%
                 </span>
               )}
             </div>
-            <span className="flex items-center gap-1 text-blue-700/80">
-              <Trophy size={10} />
-              {totalSellable} units totaal
+            <span className="text-[11px] text-gray-600">
+              {soldCount + reservedCount} / {totalSellable} units
             </span>
           </div>
 
           {/* Bar */}
-          <div className="relative h-5 rounded-lg bg-blue-900/40 border border-blue-800/30 overflow-hidden">
+          <div
+            className="relative rounded-lg overflow-hidden border border-blue-800/25"
+            style={{ height: "28px", background: "rgba(23,37,84,0.35)" }}
+          >
             {soldPct > 0 && (
               <div
-                className="absolute left-0 top-0 h-full bg-emerald-400/75 transition-all duration-700"
-                style={{ width: `${soldPct}%` }}
+                className="absolute left-0 top-0 h-full transition-all duration-700"
+                style={{ width: `${soldPct}%`, background: "rgba(52,211,153,0.72)" }}
               />
             )}
             {reservedPct > 0 && (
               <div
-                className="absolute top-0 h-full bg-yellow-400/55 transition-all duration-700"
-                style={{ left: `${soldPct}%`, width: `${reservedPct}%` }}
+                className="absolute top-0 h-full transition-all duration-700"
+                style={{ left: `${soldPct}%`, width: `${reservedPct}%`, background: "rgba(250,204,21,0.50)" }}
               />
             )}
-            {soldPct > 12 && (
-              <span
-                className="absolute top-0 h-full flex items-center text-[10px] font-bold text-emerald-900/80 pl-2"
-              >
-                {Math.round(soldPct)}%
+            {/* Percentage label */}
+            {(soldPct + reservedPct) > 8 && (
+              <span className="absolute inset-y-0 left-3 flex items-center text-[11px] font-bold text-white/75 select-none pointer-events-none">
+                {Math.round(soldPct + reservedPct)}%
               </span>
             )}
           </div>
 
-          {/* Axis labels */}
-          <div className="flex justify-between text-[10px] text-blue-800/70">
-            <span>Start</span>
+          {/* Axis */}
+          <div className="flex justify-between text-[10.5px] text-blue-800/55">
+            <span>0%</span>
             <span className="flex items-center gap-1">
-              <Trophy size={9} className="text-yellow-400/40" />
-              Volledig uitverkocht
+              <Trophy size={10} className="text-yellow-400/35" />
+              100% uitverkocht &nbsp;({totalSellable} units)
             </span>
           </div>
         </div>
