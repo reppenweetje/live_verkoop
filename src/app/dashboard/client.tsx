@@ -211,6 +211,7 @@ const SLUG_TO_AUDIO: Record<string, string> = {
   "de-hofman": "/audio/hofman.mp3",
   elster11:    "/audio/elster11.m4a",
   depaveri:    "/audio/paveri.m4a",
+  "6th-grid":  "/audio/6th-grid.mp3",
 };
 
 // Audio-objecten op module-niveau zodat ze blijven afspelen tijdens client-side navigatie
