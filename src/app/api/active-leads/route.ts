@@ -20,6 +20,13 @@ function isInternalEmail(email: string | null | undefined): boolean {
   return false;
 }
 
+export type ActiveLeadAction =
+  | { type: "gereserveerd"; unitCode: string }
+  | { type: "gekocht"; unitCode: string }
+  | { type: "geannuleerd"; unitCode: string }
+  | { type: "favoriet" }
+  | { type: "browsing" };
+
 export interface ActiveLead {
   id: number;
   firstName: string;
@@ -29,6 +36,7 @@ export interface ActiveLead {
   favouriteCount: number;
   tags: string[];
   source: "heartbeat" | "directus";
+  currentAction?: ActiveLeadAction;
 }
 
 export async function GET(request: Request) {
@@ -97,6 +105,7 @@ export async function GET(request: Request) {
                 favouriteCount: Array.isArray(c.favourites) ? c.favourites.length : 0,
                 tags: c.tags ?? [],
                 source: "directus",
+                currentAction: { type: "favoriet" },
               });
             }
           }
@@ -117,7 +126,7 @@ export async function GET(request: Request) {
       const unitQs = [
         `filter%5Bproject_id%5D%5B_eq%5D=${directusProjectId}`,
         `filter%5Bupdated_at%5D%5B_gte%5D=${since5Enc}`,
-        `fields=id,code,reserved_by,bought_by,reserved_at,bought_at,updated_at`,
+        `fields=id,code,bought,reserved_by,bought_by,reserved_until,reserved_at,bought_at,updated_at`,
         `limit=50`,
       ].join("&");
 
@@ -131,32 +140,53 @@ export async function GET(request: Request) {
         const recentUnits: Array<{
           id: number;
           code: string;
+          bought: boolean;
           reserved_by: number | null;
           bought_by: number | null;
+          reserved_until: string | null;
           reserved_at: string | null;
           bought_at: string | null;
           updated_at: string | null;
         }> = unitJson.data ?? [];
 
-        // Verzamel unieke customer IDs uit recent gewijzigde units
-        const actionMap = new Map<number, { unitCode: string; activityAt: string }>();
+        const now = new Date();
+
+        // Bepaal actietype per unit en wijs toe aan de juiste klant
+        const actionMap = new Map<number, {
+          unitCode: string;
+          activityAt: string;
+          actionType: "gereserveerd" | "gekocht" | "geannuleerd";
+        }>();
+
         for (const u of recentUnits) {
           const activityAt = u.updated_at ?? "";
-          if (u.bought_by && u.bought_by > 0) {
-            const existing = actionMap.get(u.bought_by);
-            if (!existing || activityAt > existing.activityAt) {
-              actionMap.set(u.bought_by, { unitCode: u.code, activityAt });
-            }
-          } else if (u.reserved_by && u.reserved_by > 0) {
-            const existing = actionMap.get(u.reserved_by);
-            if (!existing || activityAt > existing.activityAt) {
-              actionMap.set(u.reserved_by, { unitCode: u.code, activityAt });
-            }
+
+          // Bepaal actietype op basis van huidige staat van de unit
+          const isBought = u.bought === true;
+          const hasActiveReservation = u.reserved_until
+            ? new Date(u.reserved_until) > now
+            : false;
+
+          const actionType = isBought
+            ? "gekocht"
+            : hasActiveReservation
+            ? "gereserveerd"
+            : "geannuleerd";
+
+          // Bepaal welke klant de actie heeft uitgevoerd
+          const customerId = isBought
+            ? (u.bought_by && u.bought_by > 0 ? u.bought_by : null)
+            : (u.reserved_by && u.reserved_by > 0 ? u.reserved_by : null);
+
+          if (!customerId) continue;
+
+          const existing = actionMap.get(customerId);
+          if (!existing || activityAt > existing.activityAt) {
+            actionMap.set(customerId, { unitCode: u.code, activityAt, actionType });
           }
         }
 
         if (actionMap.size > 0) {
-          // Klantgegevens ophalen voor deze IDs
           const customerIds = Array.from(actionMap.keys()).join(",");
           const custRes = await fetch(
             `${DIRECTUS_URL}/items/customers?filter%5Bid%5D%5B_in%5D=${customerIds}&fields=id,first_name,last_name,email,tags,favourites&limit=50`,
@@ -178,6 +208,7 @@ export async function GET(request: Request) {
                 favouriteCount: Array.isArray(c.favourites) ? c.favourites.length : 0,
                 tags: c.tags ?? [],
                 source: "directus",
+                currentAction: { type: action.actionType, unitCode: action.unitCode },
               });
             }
           }
@@ -189,16 +220,33 @@ export async function GET(request: Request) {
   }
 
   // --- Samenvoegen: heartbeat > unit-actie > directus-favorieten ---
+  // currentAction prioriteit: unit-actie (gereserveerd/gekocht/geannuleerd) > favoriet > browsing
   const seenIds = new Set<number>();
   const combined: ActiveLead[] = [];
+
+  // Helper: meest relevante currentAction kiezen (unit-actie wint van favoriet/browsing)
+  function bestAction(a?: ActiveLeadAction, b?: ActiveLeadAction): ActiveLeadAction | undefined {
+    const rank = (ac?: ActiveLeadAction) => {
+      if (!ac) return 0;
+      if (ac.type === "gekocht") return 4;
+      if (ac.type === "gereserveerd") return 3;
+      if (ac.type === "geannuleerd") return 2;
+      if (ac.type === "favoriet") return 1;
+      return 0;
+    };
+    return rank(a) >= rank(b) ? a : b;
+  }
 
   // 1. Heartbeat leads (meest actueel — live browsing)
   for (const hb of heartbeatLeads) {
     if (seenIds.has(hb.id)) continue;
     seenIds.add(hb.id);
-    const directus = directusLeads.find((d) => d.id === hb.id) ?? unitActionLeads.find((d) => d.id === hb.id);
-    if (directus) {
-      combined.push({ ...directus, lastActiveAt: new Date(hb.lastSeen).toISOString(), source: "heartbeat" });
+    const unitLead = unitActionLeads.find((d) => d.id === hb.id);
+    const directus = directusLeads.find((d) => d.id === hb.id);
+    const base = unitLead ?? directus;
+    const action = bestAction(unitLead?.currentAction, directus?.currentAction) ?? { type: "browsing" as const };
+    if (base) {
+      combined.push({ ...base, lastActiveAt: new Date(hb.lastSeen).toISOString(), source: "heartbeat", currentAction: action });
     } else {
       const nameParts = hb.name.trim().split(" ");
       combined.push({
@@ -210,6 +258,7 @@ export async function GET(request: Request) {
         favouriteCount: 0,
         tags: [],
         source: "heartbeat",
+        currentAction: { type: "browsing" },
       });
     }
   }
@@ -218,18 +267,21 @@ export async function GET(request: Request) {
   for (const ul of unitActionLeads) {
     if (seenIds.has(ul.id)) continue;
     seenIds.add(ul.id);
-    // Gebruik de meest recente timestamp als directus ook een recentere heeft
     const directus = directusLeads.find((d) => d.id === ul.id);
     if (directus) {
       const ts1 = new Date(ul.lastActiveAt).getTime();
       const ts2 = new Date(directus.lastActiveAt).getTime();
-      combined.push({ ...directus, lastActiveAt: ts1 >= ts2 ? ul.lastActiveAt : directus.lastActiveAt });
+      combined.push({
+        ...directus,
+        lastActiveAt: ts1 >= ts2 ? ul.lastActiveAt : directus.lastActiveAt,
+        currentAction: bestAction(ul.currentAction, directus.currentAction),
+      });
     } else {
       combined.push(ul);
     }
   }
 
-  // 3. Directus leads op basis van favoriet-activiteit (30 min window)
+  // 3. Directus leads op basis van favoriet-activiteit (5 min window)
   for (const dl of directusLeads) {
     if (!heartbeatIds.has(dl.id) && !seenIds.has(dl.id)) {
       seenIds.add(dl.id);

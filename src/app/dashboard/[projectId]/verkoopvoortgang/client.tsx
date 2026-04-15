@@ -44,6 +44,36 @@ interface ActivityEvent {
   leadName?: string;
 }
 
+function ActionBadge({ action, config }: { action?: ActiveLead["currentAction"]; config: ReturnType<typeof getProjectConfig> }) {
+  if (!action) return null;
+  const code = "unitCode" in action ? formatUnitCode(action.unitCode, config) : null;
+  if (action.type === "gekocht") return (
+    <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80" }}>
+      💰 gekocht {code}
+    </span>
+  );
+  if (action.type === "gereserveerd") return (
+    <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24" }}>
+      ⚡ gereserveerd {code}
+    </span>
+  );
+  if (action.type === "geannuleerd") return (
+    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(148,163,184,0.12)", color: "#94a3b8" }}>
+      ↩ geannuleerd {code}
+    </span>
+  );
+  if (action.type === "favoriet") return (
+    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
+      ❤ favoriet
+    </span>
+  );
+  return (
+    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.05)", color: "#6b7280" }}>
+      actief
+    </span>
+  );
+}
+
 function LiveDot({ color = "emerald" }: { color?: "emerald" | "yellow" | "amber" }) {
   return (
     <span className={cn("inline-block w-2 h-2 rounded-full animate-pulse flex-shrink-0",
@@ -512,18 +542,19 @@ export default function VerkoopvoortgangClient({
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto">
                 {activeLeads.map((lead) => (
-                  <div key={lead.id} className="flex items-center gap-2.5">
-                    <span className="relative flex-shrink-0">
+                  <div key={lead.id} className="flex items-start gap-2.5">
+                    <span className="relative flex-shrink-0 mt-0.5">
                       <span className="w-6 h-6 rounded-full bg-blue-700/60 flex items-center justify-center text-xs font-bold text-white">
                         {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
                       </span>
                       <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 animate-pulse"
                         style={{ borderColor: "rgba(15,15,80,0.9)" }} />
                     </span>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                       <p className="text-xs font-semibold text-white truncate">{lead.firstName} {lead.lastName}</p>
+                      <ActionBadge action={lead.currentAction} config={config} />
                     </div>
-                    <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">
+                    <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0 mt-0.5">
                       {formatDistanceToNow(new Date(lead.lastActiveAt), { addSuffix: false, locale: nl })}
                     </span>
                   </div>
@@ -652,25 +683,21 @@ export default function VerkoopvoortgangClient({
               ) : (
                 <div className="flex-1 space-y-2 overflow-y-auto max-h-44">
                   {activeLeads.map((lead) => (
-                    <div key={lead.id} className="flex items-center justify-between py-1.5 border-b border-blue-800/30 last:border-0">
+                    <div key={lead.id} className="flex items-start justify-between py-1.5 border-b border-blue-800/30 last:border-0">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="relative flex-shrink-0">
                           <span className="w-6 h-6 rounded-full bg-blue-700/50 flex items-center justify-center text-xs font-bold text-white">
                             {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
                           </span>
-                          {"source" in lead && (lead as ActiveLead & { source?: string }).source === "heartbeat" && (
-                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 animate-pulse"
-                              style={{ borderColor: "rgba(15,15,80,0.9)" }} />
-                          )}
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 animate-pulse"
+                            style={{ borderColor: "rgba(15,15,80,0.9)" }} />
                         </span>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex flex-col gap-0.5">
                           <p className="text-xs font-semibold text-white truncate">{lead.firstName} {lead.lastName}</p>
-                          {lead.favouriteCount > 0 && (
-                            <p className="text-xs text-gray-500">❤ {lead.favouriteCount} favoriet{lead.favouriteCount !== 1 ? "en" : ""}</p>
-                          )}
+                          <ActionBadge action={lead.currentAction} config={config} />
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500 whitespace-nowrap ml-2 flex-shrink-0">
+                      <span className="text-xs text-gray-500 whitespace-nowrap ml-2 flex-shrink-0 mt-0.5">
                         {formatDistanceToNow(new Date(lead.lastActiveAt), { addSuffix: true, locale: nl })}
                       </span>
                     </div>
