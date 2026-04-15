@@ -219,17 +219,24 @@ function HorizontalTimeline({
   }
 
   // ── Month axis ────────────────────────────────────────────────────────────
+  // Inclusief de maand die de eerste datapunt bevat (ook als die vóór minTs begint)
   const allMonths = eachMonthOfInterval({
     start: startOfMonth(new Date(minTs)),
     end:   new Date(minTs + rangeMs),
   }).map((d, i, arr) => {
-    const pct    = ((d.getTime() - minTs) / rangeMs) * 100;
+    const rawPct = ((d.getTime() - minTs) / rangeMs) * 100;
+    // Clamp: maanden vóór de timeline worden aan de linkerrand gezet
+    const pct    = Math.max(0, rawPct);
     const isNew  = i === 0 || d.getFullYear() !== arr[i - 1].getFullYear();
     const label  = isNew
       ? format(d, "MMM ''yy", { locale: nl })
       : format(d, "MMM",       { locale: nl });
-    return { pct, label, isNew };
-  }).filter((m) => m.pct >= 0 && m.pct <= 100);
+    return { pct, rawPct, label, isNew };
+  })
+  // Toon maand als die binnen of net voor het zichtbare bereik begint
+  .filter((m) => m.rawPct > -15 && m.rawPct <= 101)
+  // Verwijder duplicaten op pct=0 (als twee maanden naar 0 worden geclampt)
+  .filter((m, i, arr) => i === 0 || m.pct !== arr[i - 1].pct);
 
   return (
     <div className="space-y-6">
@@ -261,13 +268,17 @@ function HorizontalTimeline({
             />
           );
 
+          // Toon tijd als het geen middernacht is (relevant voor verkoopmoment etc.)
+          const parsedDate = parseISO(m.date!);
+          const hasTime    = parsedDate.getHours() !== 0 || parsedDate.getMinutes() !== 0;
+
           const label = (
             <div className={cn("flex flex-col gap-0", ta === "text-left" ? "items-start" : ta === "text-right" ? "items-end" : "items-center")} style={{ width: `${LBL_W}px` }}>
               <p className={cn("text-[12px] font-semibold leading-tight w-full", ta, m.completed ? "text-white" : "text-blue-700/50")}>
                 {m.label}
               </p>
               <p className={cn("text-[10.5px] text-gray-500 tabular-nums mt-1 w-full", ta)}>
-                {format(parseISO(m.date!), "d MMM yyyy", { locale: nl })}
+                {format(parsedDate, hasTime ? "d MMM yyyy · HH:mm" : "d MMM yyyy", { locale: nl })}
               </p>
               {m.context && (
                 <p className={cn("text-[9.5px] text-gray-600 mt-0.5 leading-tight w-full", ta)}>

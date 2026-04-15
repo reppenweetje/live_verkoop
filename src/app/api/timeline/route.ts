@@ -60,15 +60,12 @@ export async function GET(req: NextRequest) {
 
     const pid = Number(project.id);
 
-    // Parallel ophalen: units + pinned_units (voor klant-IDs) + eerste favoriet + project aanmaakdatum
-    const [units, allPins, firstPinRaw, projectRaw] = await Promise.all([
+    // Parallel ophalen: units + pinned_units (voor klant-IDs) + project aanmaakdatum
+    const [units, allPins, projectRaw] = await Promise.all([
       getUnitsForProject(pid),
       dFetch<{ customer_id: number; created_at: string }[]>(
         `/items/pinned_units?filter%5Bproject_id%5D%5B_eq%5D=${pid}&fields=customer_id,created_at&limit=1000`
       ).catch(() => [] as { customer_id: number; created_at: string }[]),
-      dFetch<{ created_at: string }[]>(
-        `/items/pinned_units?filter%5Bproject_id%5D%5B_eq%5D=${pid}&sort=created_at&limit=1&fields=created_at`
-      ).catch(() => [] as { created_at: string }[]),
       dFetch<{ created_at: string }[]>(
         `/items/projects?filter%5Bid%5D%5B_eq%5D=${pid}&fields=created_at&limit=1`
       ).catch(() => [] as { created_at: string }[]),
@@ -81,9 +78,12 @@ export async function GET(req: NextRequest) {
       if (u.boughtById) customerIdSet.add(u.boughtById);
     }
 
-    // Vroegste registratiedatum ophalen (met interne filter)
+    // Klanten ophalen + interne accounts filteren
+    // Bewaar ook een set van externe klant-IDs om pins te filteren
     let firstRegistrationAt: string | null = null;
     let regCountAtSale: number | null = null;
+    const externalCustomerIds = new Set<number>();
+
     if (customerIdSet.size > 0) {
       try {
         const ids = Array.from(customerIdSet).join(",");
@@ -91,13 +91,13 @@ export async function GET(req: NextRequest) {
           `/items/customers?filter%5Bid%5D%5B_in%5D=${ids}&fields=id,email,created_at&limit=500`
         );
         const external = customerData.filter((c) => !isInternal(c.email));
+        external.forEach((c) => externalCustomerIds.add(c.id));
         if (external.length > 0) {
           const sorted = external.slice().sort((a, b) =>
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           );
           firstRegistrationAt = sorted[0].created_at;
 
-          // Hoeveel waren er geregistreerd vóór het verkoopmoment?
           if (project.saleStartsAt) {
             const saleTs = new Date(project.saleStartsAt).getTime();
             regCountAtSale = external.filter(
@@ -108,12 +108,20 @@ export async function GET(req: NextRequest) {
       } catch { /* skip */ }
     }
 
+    // Vroegste favoriet van een externe klant
+    const firstPinByExternal = allPins
+      .filter((p) => externalCustomerIds.has(p.customer_id))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0] ?? null;
+
     // ── Milestones berekenen ────────────────────────────────────────────────────
 
-    // Vroegste reserved_at + bought_at per unit (inclusief verlopen reserveringen)
+    // Vroegste reserved_at na verkoopmoment (filter testdata vóór start)
+    const saleStartTs = project.saleStartsAt ? new Date(project.saleStartsAt).getTime() : 0;
     const allReservedAt = units
       .map((u) => u.reservedAt)
-      .filter(Boolean) as string[];
+      .filter(Boolean)
+      .filter((d) => !project.saleStartsAt || new Date(d!).getTime() >= saleStartTs) as string[];
+
     const allBoughtAt = units
       .filter((u) => u.status === "verkocht" && u.boughtAt)
       .map((u) => u.boughtAt) as string[];
@@ -158,9 +166,9 @@ export async function GET(req: NextRequest) {
       {
         key: "eerste-favoriet",
         label: "Eerste favoriet",
-        date: firstPinRaw[0]?.created_at ?? null,
+        date: firstPinByExternal?.created_at ?? null,
         context: "",
-        completed: !!firstPinRaw[0]?.created_at,
+        completed: !!firstPinByExternal,
       },
       {
         key: "verkoopmoment",
