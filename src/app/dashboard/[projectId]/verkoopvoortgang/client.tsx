@@ -22,6 +22,8 @@ interface DashboardUnit {
   reservedAt?: string;
   reservedUntil?: string;
   boughtAt?: string;
+  reservedByName?: string;
+  boughtByName?: string;
 }
 
 interface UnitStats {
@@ -39,6 +41,7 @@ interface ActivityEvent {
   text: string;
   status: UnitStatus;
   time: Date;
+  leadName?: string;
 }
 
 function LiveDot({ color = "emerald" }: { color?: "emerald" | "yellow" | "amber" }) {
@@ -119,6 +122,11 @@ function ActivityTicker({ events }: { events: ActivityEvent[] }) {
                 }}>
                   {event.text}
                 </span>
+                {event.leadName && (isSold || isReserved) && (
+                  <span style={{ color: isSold ? "rgba(74,222,128,0.7)" : "rgba(250,204,21,0.7)", fontSize: 10, fontWeight: 500 }}>
+                    door {event.leadName}
+                  </span>
+                )}
                 {(isSold || isReserved) && (
                   <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>
                     · {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
@@ -192,9 +200,23 @@ export default function VerkoopvoortgangClient({
       const old = prev.find((u) => u.id === unit.id);
       if (!old) return;
       if (old.status !== "verkocht" && unit.status === "verkocht") {
-        newEvents.push({ id: unit.id, text: `${formatUnitCode(unit.code, config)} — ${unit.name} VERKOCHT`, status: "verkocht", time: new Date() });
+        const leadName = unit.boughtByName || unit.reservedByName;
+        newEvents.push({
+          id: unit.id,
+          text: `${formatUnitCode(unit.code, config)} VERKOCHT`,
+          leadName,
+          status: "verkocht",
+          time: new Date(),
+        });
       } else if (old.status !== "gereserveerd" && unit.status === "gereserveerd") {
-        newEvents.push({ id: unit.id, text: `${formatUnitCode(unit.code, config)} — ${unit.name} GERESERVEERD`, status: "gereserveerd", time: new Date() });
+        const leadName = unit.reservedByName;
+        newEvents.push({
+          id: unit.id,
+          text: `${formatUnitCode(unit.code, config)} GERESERVEERD`,
+          leadName,
+          status: "gereserveerd",
+          time: new Date(),
+        });
       }
     });
     if (newEvents.length > 0) {
@@ -208,10 +230,13 @@ export default function VerkoopvoortgangClient({
     const existing = [...initialUnits]
       .filter((u) => u.boughtAt || u.reservedAt)
       .sort((a, b) => new Date(b.boughtAt || b.reservedAt || "").getTime() - new Date(a.boughtAt || a.reservedAt || "").getTime())
-      .slice(0, 10)
+      .slice(0, 15)
       .map((u) => ({
         id: u.id,
-        text: u.status === "verkocht" ? `${formatUnitCode(u.code, config)} — ${u.name} VERKOCHT` : `${formatUnitCode(u.code, config)} — ${u.name} GERESERVEERD`,
+        text: u.status === "verkocht"
+          ? `${formatUnitCode(u.code, config)} VERKOCHT`
+          : `${formatUnitCode(u.code, config)} GERESERVEERD`,
+        leadName: u.status === "verkocht" ? (u.boughtByName || u.reservedByName) : u.reservedByName,
         status: u.status as UnitStatus,
         time: new Date(u.boughtAt || u.reservedAt || ""),
       }));
@@ -257,7 +282,7 @@ export default function VerkoopvoortgangClient({
 
   useEffect(() => {
     pollActiveLeads(); // direct ophalen bij mount
-    const unitsInterval    = setInterval(pollUnits, 2000);
+    const unitsInterval    = setInterval(pollUnits, 3000);
     const visitorsInterval = setInterval(pollVisitors, 15000);
     const leadsInterval    = setInterval(pollActiveLeads, 3000);
     return () => {
@@ -523,11 +548,18 @@ export default function VerkoopvoortgangClient({
             <div className="space-y-1.5 max-h-52 overflow-y-auto">
               {recentActivity.length > 0 ? recentActivity.slice(0, 8).map((event, i) => (
                 <div key={`${event.id}-${i}`} className={cn(
-                  "flex items-center justify-between px-3 py-2 rounded-lg border text-xs",
+                  "flex items-start justify-between px-3 py-2 rounded-lg border text-xs",
                   event.status === "verkocht" ? "bg-emerald-900/20 border-emerald-700/30" : "bg-amber-900/20 border-amber-700/30"
                 )}>
-                  <span className="font-medium text-white truncate">{event.text}</span>
-                  <span className="text-gray-500 whitespace-nowrap ml-2 flex-shrink-0">
+                  <div className="flex-1 min-w-0">
+                    <span className={cn("font-semibold", event.status === "verkocht" ? "text-emerald-300" : "text-amber-300")}>
+                      {event.text}
+                    </span>
+                    {event.leadName && (
+                      <p className="text-gray-400 mt-0.5">door <span className="text-white">{event.leadName}</span></p>
+                    )}
+                  </div>
+                  <span className="text-gray-500 whitespace-nowrap ml-2 flex-shrink-0 mt-0.5">
                     {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
                   </span>
                 </div>
@@ -663,11 +695,20 @@ export default function VerkoopvoortgangClient({
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {recentActivity.length > 0 ? recentActivity.map((event, i) => (
                   <div key={`${event.id}-${i}`} className={cn(
-                    "flex items-center justify-between p-3 rounded-lg border text-sm",
+                    "flex items-start justify-between p-3 rounded-lg border text-sm",
                     event.status === "verkocht" ? "bg-emerald-900/20 border-emerald-700/30" : "bg-amber-900/20 border-amber-700/30"
                   )}>
-                    <span className="font-medium text-white">{event.text}</span>
-                    <span className="text-xs text-gray-500 whitespace-nowrap ml-3">
+                    <div className="flex-1 min-w-0">
+                      <span className={cn("font-bold", event.status === "verkocht" ? "text-emerald-300" : "text-amber-300")}>
+                        {event.text}
+                      </span>
+                      {event.leadName && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          door <span className="font-semibold text-white">{event.leadName}</span>
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500 whitespace-nowrap ml-3 flex-shrink-0 mt-0.5">
                       {formatDistanceToNow(event.time, { addSuffix: true, locale: nl })}
                     </span>
                   </div>

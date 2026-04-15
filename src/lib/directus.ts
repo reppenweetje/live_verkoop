@@ -35,7 +35,8 @@ export interface DirectusUnit {
   parking_spaces: number;
   bought: boolean;
   bought_at: string | null;
-  reserved_by: number;
+  bought_by: number | null;
+  reserved_by: number | null;
   reserved_at: string | null;
   reserved_until: string | null;
   status_override: UnitStatus | "coming_soon" | null;
@@ -75,6 +76,10 @@ export interface DashboardUnit {
   reservedUntil?: string;
   boughtAt?: string;
   parkingSpaces: number;
+  reservedByName?: string;
+  boughtByName?: string;
+  reservedById?: number;
+  boughtById?: number;
 }
 
 export interface DashboardProject {
@@ -119,10 +124,16 @@ export function getUnitStatus(unit: DirectusUnit): UnitStatus {
 
 const NULL_DATE_PREFIX = "0001-01-01";
 
-export function mapUnit(unit: DirectusUnit): DashboardUnit {
+export function mapUnit(
+  unit: DirectusUnit,
+  customerNames: Map<number, string> = new Map()
+): DashboardUnit {
   const boughtAt = unit.bought_at && !unit.bought_at.startsWith(NULL_DATE_PREFIX)
     ? unit.bought_at
     : undefined;
+
+  const reservedById = unit.reserved_by && unit.reserved_by > 0 ? unit.reserved_by : undefined;
+  const boughtById = unit.bought_by && unit.bought_by > 0 ? unit.bought_by : undefined;
 
   return {
     id: String(unit.id),
@@ -133,10 +144,14 @@ export function mapUnit(unit: DirectusUnit): DashboardUnit {
     size: unit.surface_area || "",
     price: unit.price,
     status: getUnitStatus(unit),
-    reservedAt: unit.reserved_until ?? undefined,
+    reservedAt: unit.reserved_at ?? undefined,
     reservedUntil: unit.reserved_until ?? undefined,
     boughtAt,
     parkingSpaces: unit.parking_spaces || 0,
+    reservedById,
+    boughtById,
+    reservedByName: reservedById ? customerNames.get(reservedById) : undefined,
+    boughtByName: boughtById ? customerNames.get(boughtById) : undefined,
   };
 }
 
@@ -216,9 +231,33 @@ export async function getProjects(): Promise<DashboardProject[]> {
 
 export async function getUnitsForProject(projectId: number): Promise<DashboardUnit[]> {
   const raw = await directusFetch<DirectusUnit[]>(
-    `/items/units?filter%5Bproject_id%5D%5B_eq%5D=${projectId}&limit=200&sort=floor,code`
+    `/items/units?filter%5Bproject_id%5D%5B_eq%5D=${projectId}&limit=200&sort=floor,code&fields=*`
   );
-  return raw.map(mapUnit);
+
+  // Batch ophalen van klantennamen voor reserved_by en bought_by IDs
+  const customerIds = new Set<number>();
+  for (const u of raw) {
+    if (u.reserved_by && u.reserved_by > 0) customerIds.add(u.reserved_by);
+    if (u.bought_by && u.bought_by > 0) customerIds.add(u.bought_by);
+  }
+
+  const customerNames = new Map<number, string>();
+  if (customerIds.size > 0) {
+    try {
+      const ids = Array.from(customerIds).join(",");
+      const customers = await directusFetch<{ id: number; first_name: string; last_name: string }[]>(
+        `/items/customers?filter%5Bid%5D%5B_in%5D=${ids}&fields=id,first_name,last_name&limit=200`
+      );
+      for (const c of customers) {
+        const name = [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
+        customerNames.set(c.id, name || `Lead #${c.id}`);
+      }
+    } catch {
+      // Als klantgegevens niet ophaalbaar zijn, gaan we door zonder namen
+    }
+  }
+
+  return raw.map((u) => mapUnit(u, customerNames));
 }
 
 export async function getPinnedUnitsForProject(projectId: number): Promise<DirectusPinnedUnit[]> {
