@@ -37,22 +37,22 @@ export async function GET(request: Request) {
   const directusProjectId = searchParams.get("directusProjectId");
 
   // --- Bron 1: Heartbeat (live browsing via script op kopen.repp.nl) ---
-  const heartbeatLeads = getOnlineLeads(projectSlug, 2 * 60 * 1000);
+  const heartbeatLeads = getOnlineLeads(projectSlug, 5 * 60 * 1000);
   const heartbeatIds = new Set(heartbeatLeads.map((l) => l.id));
 
-  // --- Bron 2: Directus — recente pinned_units activiteit voor DIT project (30 min) ---
+  // --- Bron 2: Directus — recente pinned_units activiteit voor DIT project (5 min) ---
   // We gebruiken pinned_units i.p.v. customers.updated_at zodat de activiteit
   // gegarandeerd project-specifiek is en niet lekt naar andere projecten.
-  const since30 = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const since5 = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
   let directusLeads: ActiveLead[] = [];
   if (directusProjectId) {
     try {
-      const since30Enc = encodeURIComponent(since30);
+      const since5Enc = encodeURIComponent(since5);
       // Haal recente pins op voor dit specifieke project
       const pinQs = [
         `filter%5Bproject_id%5D%5B_eq%5D=${directusProjectId}`,
-        `filter%5Bcreated_at%5D%5B_gte%5D=${since30Enc}`,
+        `filter%5Bcreated_at%5D%5B_gte%5D=${since5Enc}`,
         `fields=customer_id,created_at`,
         `limit=200`,
         `sort=-created_at`,
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
             const custJson = await custRes.json();
             for (const c of custJson.data ?? []) {
               if (isInternalEmail(c.email)) continue;
-              const lastActiveAt = pinMap.get(c.id) ?? since30;
+              const lastActiveAt = pinMap.get(c.id) ?? since5;
               directusLeads.push({
                 id: c.id,
                 firstName: c.first_name ?? "",

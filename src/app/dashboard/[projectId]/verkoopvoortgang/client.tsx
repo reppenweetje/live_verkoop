@@ -499,7 +499,7 @@ export default function VerkoopvoortgangClient({
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                 <UserCheck size={11} className="text-emerald-400" />
-                Nu online
+                Actief
               </p>
               <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
                 style={{ background: activeLeads.length > 0 ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.05)", color: activeLeads.length > 0 ? "#4ade80" : "#6b7280" }}>
@@ -508,7 +508,7 @@ export default function VerkoopvoortgangClient({
               </span>
             </div>
             {activeLeads.length === 0 ? (
-              <p className="text-xs text-gray-600 py-2 text-center">Geen leads actief in afgelopen 30 min</p>
+              <p className="text-xs text-gray-600 py-2 text-center">Geen leads actief in de afgelopen 5 min</p>
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto">
                 {activeLeads.map((lead) => (
@@ -636,7 +636,7 @@ export default function VerkoopvoortgangClient({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <UserCheck size={15} className="text-emerald-400" />
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Nu online</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Actief</p>
                 </div>
                 <span className="flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{ background: activeLeads.length > 0 ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.05)", color: activeLeads.length > 0 ? "#4ade80" : "#6b7280" }}>
@@ -647,8 +647,7 @@ export default function VerkoopvoortgangClient({
 
               {activeLeads.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-2">
-                  <p className="text-xs text-gray-600 text-center">Geen leads live in kopen.repp.nl</p>
-                  <p className="text-xs text-gray-700 text-center">Tracker script vereist op kopen.repp.nl</p>
+                  <p className="text-xs text-gray-600 text-center">Geen leads actief in de afgelopen 5 min</p>
                 </div>
               ) : (
                 <div className="flex-1 space-y-2 overflow-y-auto max-h-44">
@@ -680,7 +679,7 @@ export default function VerkoopvoortgangClient({
               )}
 
               <p className="text-xs text-gray-600 mt-3 pt-2 border-t border-blue-800/30">
-                🟢 Live browsing · elke 30s · 🕐 Favoriet-activiteit · 30 min
+                Actief in de afgelopen 5 min · verlengt bij nieuwe actie
               </p>
             </div>
           </div>
