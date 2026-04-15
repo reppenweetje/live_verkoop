@@ -272,13 +272,16 @@ export default function VerkoopvoortgangClient({
 
   const pollActiveLeads = useCallback(async () => {
     try {
-      const res = await fetch(`/api/active-leads?projectSlug=${encodeURIComponent(projectId)}`, { cache: "no-store" });
+      const res = await fetch(
+        `/api/active-leads?projectSlug=${encodeURIComponent(projectId)}&directusProjectId=${directusProjectId}`,
+        { cache: "no-store" }
+      );
       if (res.ok) {
         const d = await res.json();
         setActiveLeads(d.activeLeads ?? []);
       }
     } catch {}
-  }, [projectId]);
+  }, [projectId, directusProjectId]);
 
   useEffect(() => {
     pollActiveLeads(); // direct ophalen bij mount
