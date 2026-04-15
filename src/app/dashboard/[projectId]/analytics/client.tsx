@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Card } from "@/components/ui/card";
 import { KPICard } from "@/components/ui/kpi-card";
-import { Users, Eye, Clock, TrendingDown, ShoppingCart, MousePointerClick, Radio, RefreshCw, ChevronDown, Globe, Monitor, Smartphone } from "lucide-react";
+import {
+  Users, Eye, Clock, TrendingDown, ShoppingCart, MousePointerClick, Radio,
+  RefreshCw, ChevronDown, Globe, Monitor, Smartphone, Rocket, Heart, Star,
+  CheckCircle, Trophy, UserPlus, CalendarClock, Settings, X, Plus, Trash2,
+  Flag, Megaphone, PartyPopper, Milestone as MilestoneIcon,
+} from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDuration, PERIODS } from "@/lib/plausible";
+import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
+import type { TimelineData, Milestone, SaleEvent } from "@/app/api/timeline/route";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -130,11 +138,386 @@ interface Props {
   initialData: AnalyticsData;
 }
 
+// ─── Timeline settings ────────────────────────────────────────────────────────
+
+export interface CustomMilestone {
+  id: string;
+  label: string;
+  date: string;       // ISO date string (datetime-local input value)
+  context: string;
+  icon: string;       // icon key
+}
+
+export interface TimelineSettings {
+  hiddenMilestones: string[];       // standard milestone keys to hide
+  customMilestones: CustomMilestone[];
+}
+
+const DEFAULT_SETTINGS: TimelineSettings = { hiddenMilestones: [], customMilestones: [] };
+
+function loadSettings(projectId: string): TimelineSettings {
+  try {
+    const raw = localStorage.getItem(`timeline-settings-${projectId}`);
+    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+function saveSettings(projectId: string, settings: TimelineSettings) {
+  localStorage.setItem(`timeline-settings-${projectId}`, JSON.stringify(settings));
+}
+
+// ─── Milestone icon mapping ───────────────────────────────────────────────────
+
+const MILESTONE_ICONS: Record<string, React.ElementType> = {
+  "project-gestart":     CalendarClock,
+  "eerste-registratie":  UserPlus,
+  "eerste-favoriet":     Heart,
+  "verkoopmoment":       Rocket,
+  "eerste-reservering":  Clock,
+  "eerste-verkoop":      Star,
+  "uitverkocht":         Trophy,
+  // Custom icon options
+  "flag":                Flag,
+  "megaphone":           Megaphone,
+  "party":               PartyPopper,
+  "milestone":           MilestoneIcon,
+  "check":               CheckCircle,
+  "star":                Star,
+  "calendar":            CalendarClock,
+  "rocket":              Rocket,
+};
+
+const STANDARD_MILESTONES: { key: string; label: string }[] = [
+  { key: "project-gestart",    label: "Project aangemaakt" },
+  { key: "eerste-registratie", label: "Eerste registratie" },
+  { key: "eerste-favoriet",    label: "Eerste favoriet" },
+  { key: "verkoopmoment",      label: "Verkoopmoment gestart" },
+  { key: "eerste-reservering", label: "Eerste reservering" },
+  { key: "eerste-verkoop",     label: "Eerste verkoop" },
+  { key: "uitverkocht",        label: "Volledig uitverkocht" },
+];
+
+const CUSTOM_ICON_OPTIONS: { key: string; label: string; Icon: React.ElementType }[] = [
+  { key: "flag",       label: "Vlag",         Icon: Flag },
+  { key: "megaphone",  label: "Megafoon",     Icon: Megaphone },
+  { key: "party",      label: "Feest",        Icon: PartyPopper },
+  { key: "milestone",  label: "Mijlpaal",     Icon: MilestoneIcon },
+  { key: "check",      label: "Vinkje",       Icon: CheckCircle },
+  { key: "star",       label: "Ster",         Icon: Star },
+  { key: "calendar",   label: "Kalender",     Icon: CalendarClock },
+  { key: "rocket",     label: "Raket",        Icon: Rocket },
+];
+
+// ─── Settings panel ───────────────────────────────────────────────────────────
+
+function TimelineSettingsPanel({
+  projectId,
+  settings,
+  onSave,
+  onClose,
+}: {
+  projectId: string;
+  settings: TimelineSettings;
+  onSave: (s: TimelineSettings) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState<TimelineSettings>(() => JSON.parse(JSON.stringify(settings)));
+  const [newLabel, setNewLabel] = useState("");
+  const [newDate, setNewDate] = useState("");
+  const [newContext, setNewContext] = useState("");
+  const [newIcon, setNewIcon] = useState("flag");
+
+  function toggleMilestone(key: string) {
+    setDraft((prev) => {
+      const hidden = prev.hiddenMilestones.includes(key)
+        ? prev.hiddenMilestones.filter((k) => k !== key)
+        : [...prev.hiddenMilestones, key];
+      return { ...prev, hiddenMilestones: hidden };
+    });
+  }
+
+  function addCustom() {
+    if (!newLabel.trim() || !newDate) return;
+    const custom: CustomMilestone = {
+      id: Date.now().toString(),
+      label: newLabel.trim(),
+      date: new Date(newDate).toISOString(),
+      context: newContext.trim(),
+      icon: newIcon,
+    };
+    setDraft((prev) => ({ ...prev, customMilestones: [...prev.customMilestones, custom] }));
+    setNewLabel(""); setNewDate(""); setNewContext(""); setNewIcon("flag");
+  }
+
+  function removeCustom(id: string) {
+    setDraft((prev) => ({ ...prev, customMilestones: prev.customMilestones.filter((c) => c.id !== id) }));
+  }
+
+  function handleSave() {
+    saveSettings(projectId, draft);
+    onSave(draft);
+    onClose();
+  }
+
+  const panel = (
+    <div className="fixed inset-0 z-[9999] flex">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Drawer */}
+      <div className="relative ml-auto w-full max-w-md h-full bg-[#0a1628] border-l border-blue-800/50 flex flex-col shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-blue-800/40">
+          <div>
+            <h2 className="text-base font-bold text-white">Tijdlijn instellingen</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Configureer de mijlpalen voor dit project</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-blue-800/40 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
+
+          {/* Section 1: Standaard mijlpalen */}
+          <div>
+            <p className="text-xs font-semibold text-yellow-400 uppercase tracking-widest mb-4">
+              Standaard mijlpalen
+            </p>
+            <p className="text-xs text-gray-500 mb-4">Zet mijlpalen aan of uit op de tijdlijn.</p>
+            <div className="space-y-2">
+              {STANDARD_MILESTONES.map(({ key, label }) => {
+                const hidden = draft.hiddenMilestones.includes(key);
+                const Icon = MILESTONE_ICONS[key] ?? CheckCircle;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleMilestone(key)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
+                      hidden
+                        ? "border-blue-800/30 bg-blue-950/30 text-gray-600"
+                        : "border-yellow-400/20 bg-yellow-400/5 text-white"
+                    )}
+                  >
+                    <Icon size={14} className={hidden ? "text-gray-700" : "text-yellow-400"} />
+                    <span className="text-sm flex-1">{label}</span>
+                    <span className={cn(
+                      "text-xs px-2 py-0.5 rounded-full font-semibold",
+                      hidden ? "bg-blue-900/40 text-gray-600" : "bg-yellow-400/15 text-yellow-400"
+                    )}>
+                      {hidden ? "verborgen" : "zichtbaar"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 2: Aangepaste mijlpalen */}
+          <div>
+            <p className="text-xs font-semibold text-yellow-400 uppercase tracking-widest mb-4">
+              Aangepaste mijlpalen
+            </p>
+
+            {/* Existing customs */}
+            {draft.customMilestones.length > 0 && (
+              <div className="space-y-2 mb-5">
+                {draft.customMilestones.map((c) => {
+                  const Icon = MILESTONE_ICONS[c.icon] ?? Flag;
+                  return (
+                    <div key={c.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-800/40 bg-blue-900/20">
+                      <Icon size={14} className="text-yellow-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white truncate">{c.label}</p>
+                        <p className="text-xs text-gray-500 tabular-nums">
+                          {format(parseISO(c.date), "d MMM yyyy · HH:mm", { locale: nl })}
+                        </p>
+                        {c.context && <p className="text-xs text-gray-600 mt-0.5 truncate">{c.context}</p>}
+                      </div>
+                      <button
+                        onClick={() => removeCustom(c.id)}
+                        className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Add new */}
+            <div className="space-y-3 rounded-xl border border-blue-800/40 bg-blue-950/40 p-4">
+              <p className="text-xs font-semibold text-gray-400">Nieuwe mijlpaal toevoegen</p>
+
+              <input
+                type="text"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="Naam (bijv. Bezichtigingsdag)"
+                className="w-full px-3 py-2 rounded-lg bg-blue-900/50 border border-blue-700/40 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-yellow-400/40"
+              />
+
+              <input
+                type="datetime-local"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-blue-900/50 border border-blue-700/40 text-sm text-white focus:outline-none focus:border-yellow-400/40 [color-scheme:dark]"
+              />
+
+              <input
+                type="text"
+                value={newContext}
+                onChange={(e) => setNewContext(e.target.value)}
+                placeholder="Toelichting (optioneel)"
+                className="w-full px-3 py-2 rounded-lg bg-blue-900/50 border border-blue-700/40 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-yellow-400/40"
+              />
+
+              {/* Icon picker */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2">Icoon</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {CUSTOM_ICON_OPTIONS.map(({ key, label, Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setNewIcon(key)}
+                      title={label}
+                      className={cn(
+                        "flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all",
+                        newIcon === key
+                          ? "border-yellow-400/40 bg-yellow-400/10 text-yellow-400"
+                          : "border-blue-800/40 bg-blue-900/30 text-gray-500 hover:text-gray-300"
+                      )}
+                    >
+                      <Icon size={14} />
+                      <span className="text-[10px]">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={addCustom}
+                disabled={!newLabel.trim() || !newDate}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-yellow-400 text-blue-950 text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-yellow-300"
+              >
+                <Plus size={14} /> Toevoegen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-blue-800/40 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg border border-blue-700/40 text-sm text-gray-400 hover:text-white hover:border-blue-600 transition-all"
+          >
+            Annuleren
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex-1 py-2.5 rounded-lg bg-yellow-400 text-blue-950 text-sm font-bold hover:bg-yellow-300 transition-all"
+          >
+            Opslaan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(panel, document.body);
+}
+
+function MilestoneRow({ milestone, iconOverride }: { milestone: Milestone; iconOverride?: string }) {
+  const Icon = (iconOverride ? MILESTONE_ICONS[iconOverride] : MILESTONE_ICONS[milestone.key]) ?? CheckCircle;
+  return (
+    <div className="flex items-start gap-4">
+      <div className={cn(
+        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5",
+        milestone.completed
+          ? "bg-yellow-400/20 text-yellow-400 ring-2 ring-yellow-400/40"
+          : "bg-blue-900/40 text-blue-700 ring-2 ring-blue-800/30"
+      )}>
+        <Icon size={14} />
+      </div>
+      <div className="flex-1 min-w-0 pb-5">
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <span className={cn("text-sm font-semibold", milestone.completed ? "text-white" : "text-blue-700")}>
+            {milestone.label}
+          </span>
+          {milestone.date ? (
+            <span className="text-xs text-gray-400 tabular-nums">
+              {format(parseISO(milestone.date), "d MMM yyyy · HH:mm", { locale: nl })}
+            </span>
+          ) : (
+            <span className="text-xs text-blue-800">—</span>
+          )}
+        </div>
+        {milestone.context && (
+          <p className="text-xs text-gray-500 mt-0.5">{milestone.context}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EventRow({ event, projectId }: { event: SaleEvent; projectId: string }) {
+  const config = getProjectConfig(projectId);
+  const displayCode = formatUnitCode(event.unitCode, config);
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-blue-800/20 last:border-0">
+      <span className="text-xs text-gray-500 tabular-nums w-32 flex-shrink-0">
+        {format(parseISO(event.date), "d MMM · HH:mm", { locale: nl })}
+      </span>
+      <span className="text-xs font-mono text-gray-300 w-16 flex-shrink-0">{displayCode}</span>
+      <span className={cn(
+        "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
+        event.type === "verkocht"
+          ? "bg-green-400/15 text-green-400"
+          : "bg-yellow-400/15 text-yellow-400"
+      )}>
+        {event.type}
+      </span>
+      <span className="text-xs text-gray-400 flex-1 truncate">{event.leadName}</span>
+      <span className="text-xs text-white font-semibold tabular-nums flex-shrink-0">
+        {event.price > 0 ? `€${event.price.toLocaleString("nl-NL")}` : "—"}
+      </span>
+    </div>
+  );
+}
+
 export default function AnalyticsClient({ projectId, projectName, siteDomain, initialData }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
   const [data, setData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
+  const [timelineLoading, setTimelineLoading] = useState(true);
+  const [timelineSettings, setTimelineSettings] = useState<TimelineSettings>(DEFAULT_SETTINGS);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Laad settings vanuit localStorage (na mount)
+  useEffect(() => {
+    setTimelineSettings(loadSettings(projectId));
+  }, [projectId]);
+
+  // Haal timeline eenmalig op (onafhankelijk van geselecteerde periode)
+  useEffect(() => {
+    let cancelled = false;
+    setTimelineLoading(true);
+    fetch(`/api/timeline?slug=${projectId}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: TimelineData) => { if (!cancelled) setTimelineData(d); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setTimelineLoading(false); });
+    return () => { cancelled = true; };
+  }, [projectId]);
 
   const fetchData = useCallback(async (period: string) => {
     setIsLoading(true);
@@ -374,7 +757,7 @@ export default function AnalyticsClient({ projectId, projectName, siteDomain, in
 
         {/* Browsers & Unit pages */}
         {!isRealtime && (data.browsers.length > 0 || unitPages.length > 0) && (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2 mb-6">
             {data.browsers.length > 0 && (
               <Card>
                 <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
@@ -399,6 +782,113 @@ export default function AnalyticsClient({ projectId, projectName, siteDomain, in
               </Card>
             )}
           </div>
+        )}
+
+        {/* ── Verkooptraject ─────────────────────────────────────────────────── */}
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-xs font-semibold text-yellow-400 uppercase tracking-widest">
+              Verkooptraject
+            </p>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-blue-800/40 border border-transparent hover:border-blue-700/40 transition-all"
+            >
+              <Settings size={12} />
+              Tijdlijn instellen
+            </button>
+          </div>
+
+          {timelineLoading ? (
+            <div className="text-gray-600 text-sm animate-pulse">Tijdlijn laden…</div>
+          ) : !timelineData ? (
+            <div className="text-gray-600 text-sm">Kon tijdlijndata niet ophalen.</div>
+          ) : (() => {
+            // Combineer standaard mijlpalen (gefilterd) + aangepaste mijlpalen
+            const visibleStandard = timelineData.milestones.filter(
+              (m) => !timelineSettings.hiddenMilestones.includes(m.key)
+            );
+            const customAsStandard: Milestone[] = timelineSettings.customMilestones.map((c) => ({
+              key: `custom-${c.id}`,
+              label: c.label,
+              date: c.date,
+              context: c.context,
+              completed: new Date(c.date) <= new Date(),
+              _customIcon: c.icon,
+            } as Milestone & { _customIcon?: string }));
+            const allMilestones = [...visibleStandard, ...customAsStandard].sort((a, b) => {
+              if (!a.date && !b.date) return 0;
+              if (!a.date) return 1;
+              if (!b.date) return -1;
+              return new Date(a.date).getTime() - new Date(b.date).getTime();
+            });
+
+            return (
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Mijlpalen */}
+                <Card>
+                  <h3 className="text-base font-bold text-white mb-6 flex items-center gap-2">
+                    <CalendarClock size={16} className="text-yellow-400" /> Mijlpalen
+                    {timelineSettings.customMilestones.length > 0 && (
+                      <span className="text-xs font-normal text-gray-500 ml-auto">
+                        +{timelineSettings.customMilestones.length} aangepast
+                      </span>
+                    )}
+                  </h3>
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-blue-800/40" />
+                    <div className="space-y-0">
+                      {allMilestones.map((m) => {
+                        const customIcon = (m as Milestone & { _customIcon?: string })._customIcon;
+                        return (
+                          <MilestoneRow
+                            key={m.key}
+                            milestone={m}
+                            iconOverride={customIcon}
+                          />
+                        );
+                      })}
+                      {allMilestones.length === 0 && (
+                        <p className="text-sm text-gray-600 py-4 pl-12">
+                          Alle mijlpalen zijn verborgen. Pas de instellingen aan.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Verkoopgebeurtenissen */}
+                <Card>
+                  <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <Star size={16} className="text-yellow-400" /> Verkopen &amp; reserveringen
+                  </h3>
+                  {timelineData.events.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Star size={28} className="text-blue-800 mb-3" />
+                      <p className="text-sm text-gray-600">Nog geen verkopen of reserveringen</p>
+                      <p className="text-xs text-gray-700 mt-1">Ze verschijnen hier zodra het verkoopmoment start</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
+                      {timelineData.events.map((ev, i) => (
+                        <EventRow key={`${ev.unitCode}-${ev.type}-${i}`} event={ev} projectId={projectId} />
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Settings panel */}
+        {settingsOpen && (
+          <TimelineSettingsPanel
+            projectId={projectId}
+            settings={timelineSettings}
+            onSave={setTimelineSettings}
+            onClose={() => setSettingsOpen(false)}
+          />
         )}
       </div>
     </div>
