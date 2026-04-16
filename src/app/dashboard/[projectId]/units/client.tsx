@@ -10,6 +10,7 @@ import { nl } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { FloorPlanHeatmap } from "@/components/floor-plan-heatmap";
 import { getProjectConfig, formatUnitCode } from "@/lib/project-config";
+import { useSaleAudio } from "@/hooks/useSaleAudio";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -55,6 +56,10 @@ export default function UnitsClient({ initialUnits, initialStats, projectId, dir
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinnedCounts, setPinnedCounts] = useState(initialPinnedCounts);
   const [pinnedLeads, setPinnedLeads] = useState<Record<number, { id: number; name: string; totalFavourites: number }[]>>({});
+
+  // 6th Grid jingle bij verkoop of reservering
+  const jingleSrc = projectId === "6th-grid" ? "/audio/6th-grid.mp3" : undefined;
+  useSaleAudio(units, false, jingleSrc);
 
   useEffect(() => {
     // Eenmalig leads ophalen bij mount (minder kritisch qua frequentie)

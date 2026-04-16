@@ -24,7 +24,14 @@ function playAudio(src: string) {
   }
 }
 
-export function useSaleAudio(units: AudioUnit[], muted = false) {
+/**
+ * Speelt audio af wanneer een unit van status verandert naar "verkocht" of "gereserveerd".
+ * @param units       - Lijst van units met id en status
+ * @param muted       - Geluid dempen
+ * @param jingleSrc   - Optioneel: vervang de generieke geluiden door één custom jingle
+ *                      (bijv. project-specifieke jingle voor 6th Grid)
+ */
+export function useSaleAudio(units: AudioUnit[], muted = false, jingleSrc?: string) {
   const prevStatusRef = useRef<Map<string, UnitStatus>>(new Map());
   const initializedRef = useRef(false);
 
@@ -41,15 +48,22 @@ export function useSaleAudio(units: AudioUnit[], muted = false) {
     units.forEach((unit) => {
       const prev = prevStatusRef.current.get(unit.id);
       if (!prev) return;
-      if (prev !== "verkocht" && unit.status === "verkocht") {
-        playAudio(AUDIO_FILES.verkocht);
-      } else if (prev !== "gereserveerd" && unit.status === "gereserveerd") {
-        playAudio(AUDIO_FILES.gereserveerd);
+      const statusChanged =
+        (prev !== "verkocht" && unit.status === "verkocht") ||
+        (prev !== "gereserveerd" && unit.status === "gereserveerd");
+      if (statusChanged) {
+        if (jingleSrc) {
+          playAudio(jingleSrc);
+        } else if (unit.status === "verkocht") {
+          playAudio(AUDIO_FILES.verkocht);
+        } else {
+          playAudio(AUDIO_FILES.gereserveerd);
+        }
       }
     });
 
     const map = new Map<string, UnitStatus>();
     units.forEach((u) => map.set(u.id, u.status));
     prevStatusRef.current = map;
-  }, [units, muted]);
+  }, [units, muted, jingleSrc]);
 }

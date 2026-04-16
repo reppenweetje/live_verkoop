@@ -220,7 +220,9 @@ export default function VerkoopvoortgangClient({
     });
   }, []);
 
-  useSaleAudio(units, muted);
+  // 6th Grid jingle bij verkoop of reservering (overschrijft generieke geluiden)
+  const jingleSrc = projectId === "6th-grid" ? "/audio/6th-grid.mp3" : undefined;
+  useSaleAudio(units, muted, jingleSrc);
 
   // Detecteer nieuwe verkopen/reserveringen
   useEffect(() => {
