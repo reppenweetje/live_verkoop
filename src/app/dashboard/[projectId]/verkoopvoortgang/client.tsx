@@ -222,7 +222,7 @@ export default function VerkoopvoortgangClient({
 
   // 6th Grid jingle bij verkoop of reservering (overschrijft generieke geluiden)
   const jingleSrc = projectId === "6th-grid" ? "/audio/6th-grid.mp3" : undefined;
-  useSaleAudio(units, muted, jingleSrc);
+  const { audioUnlocked, manualUnlock } = useSaleAudio(units, muted, jingleSrc);
 
   // Detecteer nieuwe verkopen/reserveringen
   useEffect(() => {
@@ -373,11 +373,26 @@ export default function VerkoopvoortgangClient({
         <RefreshCw size={12} className={cn("text-yellow-400", isRefreshing && "animate-spin")} />
         <span>{format(lastUpdated, "HH:mm:ss", { locale: nl })}</span>
       </div>
-      <button onClick={() => setMuted((m) => !m)} title={muted ? "Geluid aan" : "Geluid uit"}
-        className={cn("w-8 h-8 rounded-full flex items-center justify-center border transition-colors",
-          muted ? "border-gray-700 text-gray-600" : "border-yellow-400/30 text-yellow-400"
-        )}>
-        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+      {/* Audio-knop: ontgrendelt iOS audio context bij eerste tap én toggelt mute */}
+      <button
+        onClick={() => { manualUnlock(); setMuted((m) => !m); }}
+        title={!audioUnlocked ? "Tik om audio in te schakelen" : muted ? "Geluid aan" : "Geluid uit"}
+        className={cn(
+          "flex items-center gap-1.5 px-2 h-8 rounded-full border transition-colors text-xs font-medium",
+          !audioUnlocked
+            ? "border-yellow-400 text-yellow-400 bg-yellow-400/10 animate-pulse"
+            : muted
+              ? "border-gray-700 text-gray-600"
+              : "border-yellow-400/30 text-yellow-400"
+        )}
+      >
+        {!audioUnlocked ? (
+          <><Volume2 size={13} /><span>Audio aan</span></>
+        ) : muted ? (
+          <VolumeX size={14} />
+        ) : (
+          <Volume2 size={14} />
+        )}
       </button>
       <button onClick={togglePortrait} title={portraitMode ? "Volledig scherm" : "Portrait mode"}
         className={cn("w-8 h-8 rounded-full flex items-center justify-center border transition-colors",

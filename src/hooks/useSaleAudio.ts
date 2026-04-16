@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
 
 type UnitStatus = "beschikbaar" | "gereserveerd" | "verkocht" | "coming_soon";
 
@@ -14,87 +14,168 @@ const AUDIO_FILES = {
   gereserveerd: "/sounds/reserve.mp3",
 };
 
-/**
- * Pre-load een audio-instantie en geef een play()-functie terug.
- * De instantie wordt hergebruikt (geen nieuw object per play), wat
- * browser-autoplay-beleid omzeilt zodra de context eenmaal ontgrendeld is.
- */
-function createAudioPlayer(src: string) {
-  if (typeof window === "undefined") return { play: () => {}, unlock: () => {} };
+// ─── Web Audio API globals ─────────────────────────────────────────────────────
+// Safari iOS vereist dat AudioContext.resume() SYNCHROON wordt aangeroepen
+// vanuit een directe user-gesture handler. Na die ene unlock werkt
+// programmatische audio (BufferSource.start()) altijd, ook zonder geste.
 
-  const audio = new Audio(src);
-  audio.preload = "auto";
-  audio.volume = 0.8;
+let _ctx: AudioContext | null = null;
+let _ctxUnlocked = false;
 
-  return {
-    play() {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    },
-    /** Speel even af en pauzeer direct – ontgrendelt de browser audio context. */
-    unlock() {
-      audio.play()
-        .then(() => { audio.pause(); audio.currentTime = 0; })
-        .catch(() => {});
-    },
-  };
-}
-
-// Module-level cache: src → { play, unlock }
-const audioCache = new Map<string, ReturnType<typeof createAudioPlayer>>();
-
-function getPlayer(src: string) {
-  if (!audioCache.has(src)) {
-    audioCache.set(src, createAudioPlayer(src));
+function getCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!_ctx) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const AC = window.AudioContext ?? (window as any).webkitAudioContext;
+    if (!AC) return null;
+    _ctx = new AC();
   }
-  return audioCache.get(src)!;
+  return _ctx;
 }
 
 /**
- * Speelt audio af wanneer een unit van status verandert naar "verkocht" of "gereserveerd".
- *
- * @param units       - Lijst van units met id en status
- * @param muted       - Geluid dempen
- * @param jingleSrc   - Optioneel: vervang de generieke geluiden door één custom jingle
- *                      (bijv. project-specifieke jingle voor 6th Grid)
+ * MOET synchroon worden aangeroepen vanuit een user-gesture event handler.
+ * Na deze aanroep is de context "running" en werkt audio altijd.
  */
-export function useSaleAudio(units: AudioUnit[], muted = false, jingleSrc?: string) {
-  const prevStatusRef   = useRef<Map<string, UnitStatus>>(new Map());
-  const initializedRef  = useRef(false);
-  const unlockedRef     = useRef(false);
+function unlockCtxSync(): boolean {
+  if (_ctxUnlocked) return true;
+  const ctx = getCtx();
+  if (!ctx) return false;
 
-  // Pre-load de audio-bestanden zodra de hook mount
+  // Synchrone aanroep – geen await, anders herkent Safari het niet als user gesture
+  ctx.resume();
+
+  // Speel een stil geluid af via HTML Audio om ook de "legacy" audio-poort te ontgrendelen
+  try {
+    const silent = new Audio(
+      "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
+    );
+    silent.volume = 0;
+    silent.play().catch(() => {});
+  } catch { /* ignore */ }
+
+  _ctxUnlocked = true;
+  return true;
+}
+
+// ─── Buffer cache ─────────────────────────────────────────────────────────────
+
+const _buffers = new Map<string, AudioBuffer | "loading" | "error">();
+const _loadPromises = new Map<string, Promise<AudioBuffer | null>>();
+
+function loadBuffer(src: string): Promise<AudioBuffer | null> {
+  const cached = _buffers.get(src);
+  if (cached && cached !== "loading") {
+    return Promise.resolve(cached === "error" ? null : cached as AudioBuffer);
+  }
+  if (_loadPromises.has(src)) return _loadPromises.get(src)!;
+
+  _buffers.set(src, "loading");
+  const promise = (async () => {
+    try {
+      const ctx = getCtx();
+      if (!ctx) return null;
+      const res = await fetch(src);
+      const ab  = await res.arrayBuffer();
+      const buf = await ctx.decodeAudioData(ab);
+      _buffers.set(src, buf);
+      return buf;
+    } catch {
+      _buffers.set(src, "error");
+      return null;
+    }
+  })();
+  _loadPromises.set(src, promise);
+  return promise;
+}
+
+function playBuffer(buf: AudioBuffer) {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    if (ctx.state !== "running") {
+      // Probeer alsnog te resumeren (werkt mogelijk als context kort suspended raakte)
+      ctx.resume();
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch { /* ignore */ }
+}
+
+async function playSrc(src: string) {
+  const buf = await loadBuffer(src);
+  if (buf) playBuffer(buf);
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+interface SaleAudioResult {
+  /** True nadat de gebruiker de audio heeft ingeschakeld */
+  audioUnlocked: boolean;
+  /** Roep dit aan op een directe tap/click om iOS audio te ontgrendelen */
+  manualUnlock: () => void;
+}
+
+/**
+ * Speelt audio af wanneer een unit van status verandert naar "verkocht" of
+ * "gereserveerd". Werkt ook op iPad Safari via de Web Audio API.
+ *
+ * BELANGRIJK: op iOS moet de gebruiker één keer `manualUnlock()` aanroepen
+ * vanuit een directe tap/click handler voordat audio automatisch werkt.
+ *
+ * @param units      - Lijst van units met id en status
+ * @param muted      - Geluid dempen
+ * @param jingleSrc  - Optioneel: speel deze jingle i.p.v. generieke geluiden
+ */
+export function useSaleAudio(
+  units: AudioUnit[],
+  muted = false,
+  jingleSrc?: string
+): SaleAudioResult {
+  const prevStatusRef  = useRef<Map<string, UnitStatus>>(new Map());
+  const initializedRef = useRef(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(() => _ctxUnlocked);
+
+  // Pre-load audiobuffers zodra de hook mount
   useEffect(() => {
+    getCtx(); // initialiseer AudioContext alvast (state: suspended)
     if (jingleSrc) {
-      getPlayer(jingleSrc);
+      loadBuffer(jingleSrc);
     } else {
-      getPlayer(AUDIO_FILES.verkocht);
-      getPlayer(AUDIO_FILES.gereserveerd);
+      loadBuffer(AUDIO_FILES.verkocht);
+      loadBuffer(AUDIO_FILES.gereserveerd);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Ontgrendel de browser audio context op de eerste klik/toets op de pagina
-  const unlock = useCallback(() => {
-    if (unlockedRef.current) return;
-    unlockedRef.current = true;
-    const srcs = jingleSrc
-      ? [jingleSrc]
-      : [AUDIO_FILES.verkocht, AUDIO_FILES.gereserveerd];
-    srcs.forEach((src) => getPlayer(src).unlock());
-  }, [jingleSrc]);
+  /** Expliciet ontgrendelen vanuit een directe user tap. */
+  const manualUnlock = useCallback(() => {
+    if (_ctxUnlocked) return;
+    unlockCtxSync();
+    setAudioUnlocked(true);
+  }, []);
 
+  // Ook ontgrendelen op elke andere user-interactie met de pagina
   useEffect(() => {
-    const opts = { once: true, capture: true } as const;
-    document.addEventListener("click",   unlock, opts);
-    document.addEventListener("keydown", unlock, opts);
-    document.addEventListener("touchstart", unlock, opts);
-    return () => {
-      document.removeEventListener("click",   unlock, opts);
-      document.removeEventListener("keydown", unlock, opts);
-      document.removeEventListener("touchstart", unlock, opts);
+    const handler = () => {
+      if (_ctxUnlocked) return;
+      unlockCtxSync();
+      setAudioUnlocked(true);
     };
-  }, [unlock]);
+    const opts = { capture: true, once: true } as AddEventListenerOptions;
+    document.addEventListener("click",      handler, opts);
+    document.addEventListener("touchstart", handler, opts);
+    document.addEventListener("pointerdown", handler, opts);
+    document.addEventListener("keydown",    handler, opts);
+    return () => {
+      document.removeEventListener("click",      handler, opts);
+      document.removeEventListener("touchstart", handler, opts);
+      document.removeEventListener("pointerdown", handler, opts);
+      document.removeEventListener("keydown",    handler, opts);
+    };
+  }, []);
 
   // Detecteer status-wijzigingen en speel audio
   useEffect(() => {
@@ -109,7 +190,6 @@ export function useSaleAudio(units: AudioUnit[], muted = false, jingleSrc?: stri
 
     units.forEach((unit) => {
       const prev = prevStatusRef.current.get(unit.id);
-      // Sla units over die nog niet in prevStatusRef zitten (nieuw toegevoegde units)
       if (prev === undefined) return;
 
       const toVerkocht     = prev !== "verkocht"     && unit.status === "verkocht";
@@ -117,11 +197,11 @@ export function useSaleAudio(units: AudioUnit[], muted = false, jingleSrc?: stri
 
       if (toVerkocht || toGereserveerd) {
         if (jingleSrc) {
-          getPlayer(jingleSrc).play();
+          playSrc(jingleSrc);
         } else if (toVerkocht) {
-          getPlayer(AUDIO_FILES.verkocht).play();
+          playSrc(AUDIO_FILES.verkocht);
         } else {
-          getPlayer(AUDIO_FILES.gereserveerd).play();
+          playSrc(AUDIO_FILES.gereserveerd);
         }
       }
     });
@@ -130,4 +210,6 @@ export function useSaleAudio(units: AudioUnit[], muted = false, jingleSrc?: stri
     units.forEach((u) => map.set(u.id, u.status));
     prevStatusRef.current = map;
   }, [units, muted, jingleSrc]);
+
+  return { audioUnlocked, manualUnlock };
 }
